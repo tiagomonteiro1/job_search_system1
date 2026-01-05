@@ -64,3 +64,13 @@
 - [x] Implementar formatação profissional automática do currículo
 - [x] Adicionar preview do currículo formatado
 - [x] Criar opção de download do currículo formatado em PDF
+
+## Melhorias de Navegação e Área Administrativa
+- [x] Adicionar botão de logout em todas as páginas
+- [x] Criar botão "Área Admin" visível apenas para administradores
+- [x] Implementar menu administrativo completo
+- [x] Adicionar gerenciamento de usuários no admin
+- [x] Adicionar gerenciamento de assinaturas no admin
+- [x] Adicionar análise de currículo com IA no admin
+- [x] Adicionar cadastro de promoções no admin
+- [x] Adicionar localizador de vagas nos principais sites

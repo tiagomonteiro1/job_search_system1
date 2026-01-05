@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -87,17 +88,7 @@ export default function Integrations() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" onClick={() => setLocation("/dashboard")}>
-              ← Voltar
-            </Button>
-            <h1 className="text-xl font-bold">Integrações</h1>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Integrações" showBackButton={true} backTo="/dashboard" />
 
       <div className="container py-8">
         {/* Header Section */}

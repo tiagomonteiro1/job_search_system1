@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -22,22 +23,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" onClick={() => setLocation("/")}>
-              ← Voltar
-            </Button>
-            <h1 className="text-xl font-bold">Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              Olá, {user?.name || "Usuário"}
-            </span>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Dashboard" showBackButton={true} backTo="/" />
 
       <div className="container py-8">
         {/* Welcome Section */}

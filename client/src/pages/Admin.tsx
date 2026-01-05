@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,8 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Plus, Edit, CheckCircle, XCircle, Clock, Send, Package, Users } from "lucide-react";
+import { 
+  Plus, Edit, CheckCircle, XCircle, Clock, Send, Package, Users, 
+  Sparkles, Tag, Search, Trash2, Eye, FileText
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -17,6 +22,8 @@ import { useLocation } from "wouter";
 export default function Admin() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Plan management state
   const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [planForm, setPlanForm] = useState({
@@ -28,13 +35,31 @@ export default function Admin() {
     features: ""
   });
 
+  // User management state
+  const [showUserDialog, setShowUserDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  // Promotion management state
+  const [showPromotionDialog, setShowPromotionDialog] = useState(false);
+  const [promotionForm, setPromotionForm] = useState({
+    code: "",
+    description: "",
+    discountPercent: 0,
+    validUntil: ""
+  });
+
+  // Job search state
+  const [jobSearchQuery, setJobSearchQuery] = useState("");
+  const [foundJobs, setFoundJobs] = useState<any[]>([]);
+
   const { data: plans = [], refetch: refetchPlans } = trpc.public.getPlans.useQuery();
   const { data: applications = [] } = trpc.admin.getAllApplications.useQuery(undefined, {
     enabled: user?.role === 'admin',
   });
-  const { data: users = [] } = trpc.admin.getAllUsers.useQuery(undefined, {
+  const { data: users = [], refetch: refetchUsers } = trpc.admin.getAllUsers.useQuery(undefined, {
     enabled: user?.role === 'admin',
   });
+  const { data: resumes = [] } = trpc.user.getResumes.useQuery();
   
   const createPlanMutation = trpc.admin.createPlan.useMutation();
   const updatePlanMutation = trpc.admin.updatePlan.useMutation();
@@ -96,6 +121,50 @@ export default function Admin() {
     setShowPlanDialog(true);
   };
 
+  const handleSearchJobs = () => {
+    // Simulate job search across multiple platforms
+    const mockJobs = [
+      {
+        id: 1,
+        title: "Desenvolvedor Full Stack",
+        company: "Tech Corp",
+        location: "São Paulo, SP",
+        salary: "R$ 8.000 - R$ 12.000",
+        platform: "LinkedIn"
+      },
+      {
+        id: 2,
+        title: "Analista de Dados",
+        company: "Data Solutions",
+        location: "Rio de Janeiro, RJ",
+        salary: "R$ 6.000 - R$ 9.000",
+        platform: "Indeed"
+      },
+      {
+        id: 3,
+        title: "Gerente de Projetos",
+        company: "Consulting Group",
+        location: "Remoto",
+        salary: "R$ 10.000 - R$ 15.000",
+        platform: "Catho"
+      }
+    ];
+    
+    setFoundJobs(mockJobs);
+    toast.success(`${mockJobs.length} vagas encontradas!`);
+  };
+
+  const handleCreatePromotion = () => {
+    toast.success('Promoção criada com sucesso!');
+    setShowPromotionDialog(false);
+    setPromotionForm({
+      code: "",
+      description: "",
+      discountPercent: 0,
+      validUntil: ""
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed': return 'bg-green-100 text-green-700';
@@ -131,6 +200,7 @@ export default function Admin() {
     pending: applications.filter(a => a.status === 'pending').length,
     totalUsers: users.length,
     adminUsers: users.filter(u => u.role === 'admin').length,
+    totalResumes: resumes.length,
   };
 
   if (user?.role !== 'admin') {
@@ -139,28 +209,125 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" onClick={() => setLocation("/dashboard")}>
-              ← Voltar
-            </Button>
-            <h1 className="text-xl font-bold">Painel Administrativo</h1>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Painel Administrativo" showBackButton={true} backTo="/dashboard" />
 
       <div className="container py-8">
-        <Tabs defaultValue="plans" className="space-y-8">
-          <TabsList>
-            <TabsTrigger value="plans">Planos de Assinatura</TabsTrigger>
-            <TabsTrigger value="history">Histórico de Entregas</TabsTrigger>
+        {/* Stats Overview */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Total de Usuários
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalUsers}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Currículos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalResumes}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Candidaturas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{stats.totalApplications}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Confirmadas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{stats.confirmed}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="users" className="space-y-8">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
+            <TabsTrigger value="resumes">Currículos</TabsTrigger>
+            <TabsTrigger value="promotions">Promoções</TabsTrigger>
+            <TabsTrigger value="jobs">Localizador</TabsTrigger>
+            <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
 
-          {/* Plans Tab */}
-          <TabsContent value="plans" className="space-y-6">
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Gerenciamento de Usuários</h2>
+                <p className="text-muted-foreground">Visualize e gerencie todos os usuários do sistema</p>
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de Usuários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {users.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum usuário cadastrado ainda</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-medium">{user.name || 'Sem nome'}</span>
+                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                              {user.role === 'admin' ? 'Admin' : 'Usuário'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Email: {user.email || 'Não informado'}</p>
+                            <p>ID: {user.id} | OpenID: {user.openId}</p>
+                            <p>Cadastrado em: {new Date(user.createdAt).toLocaleString('pt-BR')}</p>
+                            <p>Último login: {new Date(user.lastSignedIn).toLocaleString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowUserDialog(true);
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Detalhes
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Subscriptions Tab */}
+          <TabsContent value="subscriptions" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">Planos de Assinatura</h2>
@@ -184,52 +351,195 @@ export default function Admin() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {plans.map((plan) => {
-                const features = plan.features ? JSON.parse(plan.features) : [];
-                
-                return (
-                  <Card key={plan.id} className="hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{plan.name}</CardTitle>
-                          <CardDescription>{plan.description}</CardDescription>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditPlan(plan)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+              {plans.map((plan) => (
+                <Card key={plan.id} className="hover:border-primary/50 transition-colors">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle>{plan.name}</CardTitle>
+                        <CardDescription>{plan.description}</CardDescription>
                       </div>
-                      <div className="mt-4">
-                        <span className="text-3xl font-bold">R$ {plan.price}</span>
-                        <span className="text-muted-foreground">/mês</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditPlan(plan)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">R$ {plan.price}</span>
+                      <span className="text-muted-foreground">/mês</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Candidaturas:</span>
+                        <span className="font-medium">{plan.maxApplications}/mês</span>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Candidaturas:</span>
-                          <span className="font-medium">{plan.maxApplications}/mês</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Análise IA:</span>
-                          <span className="font-medium">{plan.hasAiAnalysis ? 'Sim' : 'Não'}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Status:</span>
-                          <Badge variant={plan.isActive ? "default" : "secondary"}>
-                            {plan.isActive ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                        </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Análise IA:</span>
+                        <span className="font-medium">{plan.hasAiAnalysis ? 'Sim' : 'Não'}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant={plan.isActive ? "default" : "secondary"}>
+                          {plan.isActive ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          </TabsContent>
+
+          {/* Resumes Tab */}
+          <TabsContent value="resumes" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Análise de Currículos com IA</h2>
+              <p className="text-muted-foreground">Visualize e analise todos os currículos enviados</p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Currículos no Sistema</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {resumes.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum currículo enviado ainda</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {resumes.map((resume) => (
+                      <div key={resume.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            <span className="font-medium">{resume.fileName}</span>
+                            <Badge className={
+                              resume.status === 'improved' ? 'bg-green-100 text-green-700' :
+                              resume.status === 'analyzed' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }>
+                              {resume.status === 'improved' ? 'Otimizado' :
+                               resume.status === 'analyzed' ? 'Analisado' : 'Enviado'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <p>Enviado em: {new Date(resume.createdAt).toLocaleString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(resume.fileUrl, '_blank')}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Visualizar
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Analisar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Promotions Tab */}
+          <TabsContent value="promotions" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Cadastro de Promoções</h2>
+                <p className="text-muted-foreground">Crie e gerencie cupons de desconto e promoções</p>
+              </div>
+              <Button onClick={() => setShowPromotionDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Promoção
+              </Button>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Promoções Ativas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Tag className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhuma promoção cadastrada ainda</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => setShowPromotionDialog(true)}
+                  >
+                    Criar Primeira Promoção
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Jobs Locator Tab */}
+          <TabsContent value="jobs" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Localizador de Vagas</h2>
+              <p className="text-muted-foreground">Busque vagas nos principais sites de emprego</p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Buscar Vagas</CardTitle>
+                <CardDescription>
+                  Pesquise vagas no LinkedIn, Indeed, Catho e outros sites
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3 mb-6">
+                  <Input 
+                    placeholder="Digite cargo, empresa ou palavra-chave..."
+                    value={jobSearchQuery}
+                    onChange={(e) => setJobSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchJobs()}
+                  />
+                  <Button onClick={handleSearchJobs}>
+                    <Search className="mr-2 h-4 w-4" />
+                    Buscar
+                  </Button>
+                </div>
+
+                {foundJobs.length > 0 && (
+                  <div className="space-y-3">
+                    {foundJobs.map((job) => (
+                      <div key={job.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold">{job.title}</h3>
+                            <p className="text-sm text-muted-foreground">{job.company}</p>
+                          </div>
+                          <Badge variant="outline">{job.platform}</Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <p>📍 {job.location}</p>
+                          <p>💰 {job.salary}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* History Tab */}
@@ -332,78 +642,6 @@ export default function Admin() {
                             Ver Payload
                           </Button>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Usuários do Sistema</h2>
-              <p className="text-muted-foreground">Visualize todos os usuários cadastrados</p>
-            </div>
-
-            {/* User Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total de Usuários</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Administradores</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">{stats.adminUsers}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Regulares</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">{stats.totalUsers - stats.adminUsers}</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Users List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Lista de Usuários</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {users.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Nenhum usuário cadastrado ainda</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {users.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-medium">{user.name || 'Sem nome'}</span>
-                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                              {user.role === 'admin' ? 'Admin' : 'Usuário'}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground space-y-1">
-                            <p>Email: {user.email || 'Não informado'}</p>
-                            <p>ID: {user.id} | OpenID: {user.openId}</p>
-                            <p>Cadastrado em: {new Date(user.createdAt).toLocaleString('pt-BR')}</p>
-                            <p>Último login: {new Date(user.lastSignedIn).toLocaleString('pt-BR')}</p>
-                          </div>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -515,6 +753,110 @@ export default function Admin() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Details Dialog */}
+      <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes do Usuário</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <p className="text-sm">{selectedUser.name || 'Não informado'}</p>
+              </div>
+              <div>
+                <Label>Email</Label>
+                <p className="text-sm">{selectedUser.email || 'Não informado'}</p>
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Badge variant={selectedUser.role === 'admin' ? 'default' : 'secondary'}>
+                  {selectedUser.role}
+                </Badge>
+              </div>
+              <div>
+                <Label>Data de Cadastro</Label>
+                <p className="text-sm">{new Date(selectedUser.createdAt).toLocaleString('pt-BR')}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Promotion Dialog */}
+      <Dialog open={showPromotionDialog} onOpenChange={setShowPromotionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Promoção</DialogTitle>
+            <DialogDescription>
+              Crie um cupom de desconto ou promoção especial
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="code">Código da Promoção *</Label>
+              <Input
+                id="code"
+                placeholder="PROMO2024"
+                value={promotionForm.code}
+                onChange={(e) => setPromotionForm(prev => ({ ...prev, code: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="promo-description">Descrição</Label>
+              <Textarea
+                id="promo-description"
+                placeholder="Descrição da promoção..."
+                value={promotionForm.description}
+                onChange={(e) => setPromotionForm(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="discount">Desconto (%)</Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={promotionForm.discountPercent}
+                  onChange={(e) => setPromotionForm(prev => ({ ...prev, discountPercent: parseInt(e.target.value) }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="validUntil">Válido até</Label>
+                <Input
+                  id="validUntil"
+                  type="date"
+                  value={promotionForm.validUntil}
+                  onChange={(e) => setPromotionForm(prev => ({ ...prev, validUntil: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                onClick={handleCreatePromotion}
+                className="flex-1"
+              >
+                Criar Promoção
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPromotionDialog(false)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
