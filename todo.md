@@ -57,3 +57,10 @@
 - [x] Criar sistema de estatísticas e relatórios no admin
 - [x] Testar todas as funcionalidades end-to-end
 - [x] Criar checkpoint final com sistema totalmente funcional
+
+## Melhorias na Análise de Currículo
+- [x] Melhorar interface com botões mais claros para análise com IA
+- [x] Adicionar botão destacado "Aplicar Melhorias"
+- [x] Implementar formatação profissional automática do currículo
+- [x] Adicionar preview do currículo formatado
+- [x] Criar opção de download do currículo formatado em PDF

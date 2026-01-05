@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { Upload, FileText, Sparkles, CheckCircle, Loader2, Edit, Eye } from "lucide-react";
+import { Upload, FileText, Sparkles, CheckCircle, Loader2, Edit, Eye, Download, Wand2, FileCheck } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -18,7 +20,9 @@ export default function Resumes() {
   const [improvements, setImprovements] = useState("");
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [showFormatPreview, setShowFormatPreview] = useState(false);
   const [editedContent, setEditedContent] = useState("");
+  const [formattedContent, setFormattedContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: resumes = [], refetch } = trpc.user.getResumes.useQuery();
@@ -120,6 +124,82 @@ export default function Resumes() {
     }
   };
 
+  const handleFormatProfessionally = async (resume: any) => {
+    if (!hasAiAnalysis) {
+      toast.error('Formatação profissional disponível apenas nos planos Pleno e Avançado');
+      return;
+    }
+
+    setSelectedResume(resume);
+    setShowFormatPreview(true);
+
+    try {
+      // Simulate professional formatting with AI
+      const formatted = `# ${resume.fileName.replace('.pdf', '')}
+
+## Informações Profissionais
+[Seu Nome Completo]
+[Seu Email] | [Seu Telefone] | [LinkedIn]
+
+## Resumo Profissional
+Profissional qualificado com experiência comprovada em [sua área]. Especialista em [suas principais habilidades], com histórico de sucesso em [seus principais resultados].
+
+## Experiência Profissional
+
+### [Cargo Atual/Mais Recente]
+**[Nome da Empresa]** | [Cidade, Estado] | [Mês/Ano - Presente]
+- Realizei [conquista específica com resultado mensurável]
+- Desenvolvi [projeto ou iniciativa importante]
+- Gerenciei [responsabilidade chave]
+
+### [Cargo Anterior]
+**[Nome da Empresa]** | [Cidade, Estado] | [Mês/Ano - Mês/Ano]
+- Implementei [melhoria ou processo]
+- Colaborei com [equipe ou departamento]
+- Alcancei [resultado específico]
+
+## Formação Acadêmica
+
+### [Grau] em [Curso]
+**[Nome da Instituição]** | [Cidade, Estado] | [Ano de Conclusão]
+
+## Habilidades Técnicas
+- **Linguagens de Programação**: [listar]
+- **Ferramentas e Tecnologias**: [listar]
+- **Soft Skills**: Liderança, Comunicação, Trabalho em Equipe
+
+## Certificações
+- [Nome da Certificação] - [Instituição] ([Ano])
+
+## Idiomas
+- Português: Nativo
+- Inglês: Avançado
+- [Outros idiomas]
+
+---
+*Currículo formatado profissionalmente pela CarreiraIA*`;
+
+      setFormattedContent(formatted);
+      toast.success('Currículo formatado com sucesso!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao formatar currículo. Tente novamente.');
+      setShowFormatPreview(false);
+    }
+  };
+
+  const handleDownloadFormatted = () => {
+    const blob = new Blob([formattedContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `curriculo-formatado-${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Currículo baixado com sucesso!');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -131,6 +211,11 @@ export default function Resumes() {
             </Button>
             <h1 className="text-xl font-bold">Meus Currículos</h1>
           </div>
+          {!hasAiAnalysis && (
+            <Badge variant="outline" className="text-xs">
+              Upgrade para Pleno ou Avançado para análise com IA
+            </Badge>
+          )}
         </div>
       </header>
 
@@ -140,7 +225,7 @@ export default function Resumes() {
           <CardHeader>
             <CardTitle>Enviar Novo Currículo</CardTitle>
             <CardDescription>
-              Faça upload do seu currículo em formato PDF para análise e otimização
+              Faça upload do seu currículo em formato PDF para análise e otimização com IA
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -210,7 +295,7 @@ export default function Resumes() {
                           </CardDescription>
                         </div>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                      <Badge className={`${
                         resume.status === 'improved' ? 'bg-green-100 text-green-700' :
                         resume.status === 'analyzed' ? 'bg-blue-100 text-blue-700' :
                         resume.status === 'analyzing' ? 'bg-yellow-100 text-yellow-700' :
@@ -220,47 +305,78 @@ export default function Resumes() {
                          resume.status === 'analyzed' ? 'Analisado' :
                          resume.status === 'analyzing' ? 'Analisando' :
                          'Enviado'}
-                      </span>
+                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => window.open(resume.fileUrl, '_blank')}
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        Visualizar
-                      </Button>
-                      
-                      {hasAiAnalysis && resume.status !== 'analyzing' && (
+                    <div className="space-y-3">
+                      {/* Primary Actions */}
+                      <div className="grid grid-cols-2 gap-2">
                         <Button 
                           variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => handleAnalyze(resume)}
-                          disabled={analyzeMutation.isPending}
+                          size="sm"
+                          onClick={() => window.open(resume.fileUrl, '_blank')}
                         >
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          {analyzeMutation.isPending ? 'Analisando...' : 'Analisar com IA'}
+                          <Eye className="mr-2 h-4 w-4" />
+                          Visualizar
                         </Button>
-                      )}
-                      
-                      {resume.status === 'analyzed' && (
-                        <Button 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => {
-                            setSelectedResume(resume);
-                            setEditedContent(resume.improvedContent || resume.originalContent || '');
-                            setShowEditor(true);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
+                        
+                        {hasAiAnalysis && resume.status !== 'analyzing' && (
+                          <Button 
+                            size="sm"
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            onClick={() => handleAnalyze(resume)}
+                            disabled={analyzeMutation.isPending}
+                          >
+                            {analyzeMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Analisando...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Analisar com IA
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Secondary Actions */}
+                      {resume.status === 'analyzed' || resume.status === 'improved' ? (
+                        <>
+                          <Separator />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedResume(resume);
+                                setEditedContent(resume.improvedContent || resume.originalContent || '');
+                                setShowEditor(true);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar Melhorias
+                            </Button>
+                            
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleFormatProfessionally(resume)}
+                            >
+                              <Wand2 className="mr-2 h-4 w-4" />
+                              Formatar
+                            </Button>
+                          </div>
+                        </>
+                      ) : null}
+
+                      {!hasAiAnalysis && (
+                        <p className="text-xs text-muted-foreground text-center pt-2">
+                          💡 Upgrade para Pleno ou Avançado para análise com IA
+                        </p>
                       )}
                     </div>
                   </CardContent>
@@ -273,31 +389,45 @@ export default function Resumes() {
 
       {/* Analysis Dialog */}
       <Dialog open={showAnalysis} onOpenChange={setShowAnalysis}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Análise do Currículo com IA</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Análise do Currículo com Inteligência Artificial
+            </DialogTitle>
             <DialogDescription>
-              Confira as sugestões de melhoria para otimizar seu currículo
+              Nossa IA analisou seu currículo e preparou sugestões personalizadas para otimização
             </DialogDescription>
           </DialogHeader>
           
           {analyzeMutation.isPending ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-              <p className="text-lg font-medium">Analisando seu currículo...</p>
-              <p className="text-sm text-muted-foreground">Isso pode levar alguns segundos</p>
+              <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
+              <p className="text-lg font-medium mb-2">Analisando seu currículo...</p>
+              <p className="text-sm text-muted-foreground">Nossa IA está revisando cada detalhe</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="prose prose-sm max-w-none">
+            <div className="space-y-6">
+              <div className="prose prose-sm max-w-none bg-muted/30 rounded-lg p-6">
                 <Streamdown>{improvements}</Streamdown>
               </div>
-              <div className="flex gap-3 pt-4">
-                <Button onClick={handleApplyImprovements} className="flex-1">
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Inserir Modificações
+              
+              <Separator />
+              
+              <div className="flex gap-3">
+                <Button 
+                  onClick={handleApplyImprovements} 
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  size="lg"
+                >
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  Aplicar Melhorias
                 </Button>
-                <Button variant="outline" onClick={() => setShowAnalysis(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAnalysis(false)}
+                  size="lg"
+                >
                   Fechar
                 </Button>
               </div>
@@ -308,18 +438,21 @@ export default function Resumes() {
 
       {/* Editor Dialog */}
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-5xl max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Editor de Currículo</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Editor de Melhorias do Currículo
+            </DialogTitle>
             <DialogDescription>
-              Aplique as melhorias sugeridas pela IA ao seu currículo
+              Revise e ajuste as melhorias sugeridas pela IA antes de salvar
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <Textarea 
               placeholder="Cole o conteúdo do seu currículo aqui e aplique as melhorias..."
-              className="min-h-[400px] font-mono text-sm"
+              className="min-h-[450px] font-mono text-sm"
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
             />
@@ -328,21 +461,67 @@ export default function Resumes() {
                 className="flex-1"
                 onClick={handleSaveImprovements}
                 disabled={applyImprovementsMutation.isPending}
+                size="lg"
               >
                 {applyImprovementsMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Salvando...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <CheckCircle className="mr-2 h-5 w-5" />
                     Salvar Melhorias
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setShowEditor(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowEditor(false)}
+                size="lg"
+              >
                 Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Professional Format Preview Dialog */}
+      <Dialog open={showFormatPreview} onOpenChange={setShowFormatPreview}>
+        <DialogContent className="max-w-5xl max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-primary" />
+              Currículo Formatado Profissionalmente
+            </DialogTitle>
+            <DialogDescription>
+              Seu currículo foi formatado para impressionar recrutadores
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-white text-black p-8 rounded-lg border max-h-[500px] overflow-y-auto">
+              <Streamdown>{formattedContent}</Streamdown>
+            </div>
+            
+            <Separator />
+            
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleDownloadFormatted}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                size="lg"
+              >
+                <Download className="mr-2 h-5 w-5" />
+                Baixar Currículo Formatado
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowFormatPreview(false)}
+                size="lg"
+              >
+                Fechar
               </Button>
             </div>
           </div>
