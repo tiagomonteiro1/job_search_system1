@@ -1,11 +1,13 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { z } from "zod";
+import * as db from "./db";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -17,12 +19,94 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  // Public routes for landing page
+  public: router({
+    getPlans: publicProcedure.query(async () => {
+      return await db.getAllSubscriptionPlans();
+    }),
+    
+    getTestimonials: publicProcedure.query(async () => {
+      return await db.getVisibleTestimonials();
+    }),
+    
+    getFaqs: publicProcedure.query(async () => {
+      return await db.getVisibleFaqs();
+    }),
+  }),
+
+  // User routes
+  user: router({
+    getProfile: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getUserById(ctx.user.id);
+    }),
+    
+    getResumes: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getResumesByUserId(ctx.user.id);
+    }),
+    
+    getApplications: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getApplicationsByUserId(ctx.user.id);
+    }),
+    
+    getIntegrations: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getIntegrationsByUserId(ctx.user.id);
+    }),
+  }),
+
+  // Admin routes
+  admin: router({
+    getAllApplications: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .query(async () => {
+        return await db.getAllApplications();
+      }),
+    
+    createPlan: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .input(z.object({
+        name: z.string(),
+        description: z.string(),
+        price: z.string(),
+        maxApplications: z.number(),
+        hasAiAnalysis: z.boolean(),
+        features: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createSubscriptionPlan(input);
+      }),
+    
+    updatePlan: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        price: z.string().optional(),
+        maxApplications: z.number().optional(),
+        hasAiAnalysis: z.boolean().optional(),
+        features: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return await db.updateSubscriptionPlan(id, data);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
