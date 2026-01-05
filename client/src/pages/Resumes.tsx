@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { Upload, FileText, Sparkles, CheckCircle, Loader2, Edit, Eye } from "lucide-react";
@@ -14,16 +14,20 @@ export default function Resumes() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [uploading, setUploading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
   const [selectedResume, setSelectedResume] = useState<any>(null);
   const [improvements, setImprovements] = useState("");
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
+  const [editedContent, setEditedContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: resumes = [], refetch } = trpc.user.getResumes.useQuery();
   const { data: profile } = trpc.user.getProfile.useQuery();
   const { data: plans = [] } = trpc.public.getPlans.useQuery();
+  
+  const uploadMutation = trpc.resume.upload.useMutation();
+  const analyzeMutation = trpc.resume.analyze.useMutation();
+  const applyImprovementsMutation = trpc.resume.applyImprovements.useMutation();
   
   const currentPlan = plans.find(p => p.id === profile?.subscriptionPlanId);
   const hasAiAnalysis = currentPlan?.hasAiAnalysis || false;
@@ -45,17 +49,23 @@ export default function Resumes() {
     setUploading(true);
     
     try {
-      // Simular upload para S3 (implementar com storagePut no backend)
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // TODO: Implementar endpoint de upload real
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Currículo enviado com sucesso!');
-      refetch();
-    } catch (error) {
-      toast.error('Erro ao enviar currículo. Tente novamente.');
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const base64Data = base64.split(',')[1]; // Remove data:application/pdf;base64, prefix
+        
+        await uploadMutation.mutateAsync({
+          fileName: file.name,
+          fileContent: base64Data,
+        });
+        
+        toast.success('Currículo enviado com sucesso!');
+        refetch();
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao enviar currículo. Tente novamente.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -71,56 +81,43 @@ export default function Resumes() {
     }
 
     setSelectedResume(resume);
-    setAnalyzing(true);
     setShowAnalysis(true);
 
     try {
-      // TODO: Implementar chamada real para análise com IA
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const result = await analyzeMutation.mutateAsync({
+        resumeId: resume.id,
+      });
       
-      const mockAnalysis = `# Análise do Currículo
-
-## Pontos Fortes
-- Experiência relevante na área
-- Boa estruturação de informações
-- Formação acadêmica sólida
-
-## Sugestões de Melhoria
-
-### 1. Otimização de Palavras-chave
-Adicione palavras-chave específicas da sua área para melhorar a visibilidade em sistemas ATS (Applicant Tracking Systems).
-
-### 2. Quantificação de Resultados
-Sempre que possível, adicione números e métricas para demonstrar o impacto do seu trabalho. Por exemplo:
-- "Aumentei as vendas em 30%"
-- "Gerenciei equipe de 10 pessoas"
-- "Reduzi custos em R$ 50.000"
-
-### 3. Formatação Profissional
-- Use bullet points para facilitar a leitura
-- Mantenha consistência na formatação
-- Destaque suas principais conquistas
-
-### 4. Seção de Habilidades
-Crie uma seção dedicada às suas habilidades técnicas e comportamentais mais relevantes para a vaga desejada.
-
-### 5. Resumo Profissional
-Adicione um breve resumo no início do currículo destacando sua experiência e objetivos profissionais.`;
-
-      setImprovements(mockAnalysis);
+      setImprovements(result.analysis);
       toast.success('Análise concluída!');
-    } catch (error) {
-      toast.error('Erro ao analisar currículo. Tente novamente.');
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao analisar currículo. Tente novamente.');
       setShowAnalysis(false);
-    } finally {
-      setAnalyzing(false);
     }
   };
 
   const handleApplyImprovements = () => {
     setShowAnalysis(false);
+    setEditedContent(selectedResume?.improvedContent || selectedResume?.originalContent || '');
     setShowEditor(true);
-    toast.info('Abra o editor para aplicar as melhorias sugeridas');
+  };
+
+  const handleSaveImprovements = async () => {
+    if (!selectedResume) return;
+    
+    try {
+      await applyImprovementsMutation.mutateAsync({
+        resumeId: selectedResume.id,
+        improvedContent: editedContent,
+      });
+      
+      toast.success('Melhorias aplicadas com sucesso!');
+      setShowEditor(false);
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar melhorias. Tente novamente.');
+    }
   };
 
   return (
@@ -244,9 +241,10 @@ Adicione um breve resumo no início do currículo destacando sua experiência e 
                           size="sm" 
                           className="flex-1"
                           onClick={() => handleAnalyze(resume)}
+                          disabled={analyzeMutation.isPending}
                         >
                           <Sparkles className="mr-2 h-4 w-4" />
-                          Analisar com IA
+                          {analyzeMutation.isPending ? 'Analisando...' : 'Analisar com IA'}
                         </Button>
                       )}
                       
@@ -256,6 +254,7 @@ Adicione um breve resumo no início do currículo destacando sua experiência e 
                           className="flex-1"
                           onClick={() => {
                             setSelectedResume(resume);
+                            setEditedContent(resume.improvedContent || resume.originalContent || '');
                             setShowEditor(true);
                           }}
                         >
@@ -282,7 +281,7 @@ Adicione um breve resumo no início do currículo destacando sua experiência e 
             </DialogDescription>
           </DialogHeader>
           
-          {analyzing ? (
+          {analyzeMutation.isPending ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-lg font-medium">Analisando seu currículo...</p>
@@ -321,12 +320,26 @@ Adicione um breve resumo no início do currículo destacando sua experiência e 
             <Textarea 
               placeholder="Cole o conteúdo do seu currículo aqui e aplique as melhorias..."
               className="min-h-[400px] font-mono text-sm"
-              defaultValue={selectedResume?.improvedContent || selectedResume?.originalContent || ''}
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
             />
             <div className="flex gap-3">
-              <Button className="flex-1">
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Salvar Melhorias
+              <Button 
+                className="flex-1"
+                onClick={handleSaveImprovements}
+                disabled={applyImprovementsMutation.isPending}
+              >
+                {applyImprovementsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Salvar Melhorias
+                  </>
+                )}
               </Button>
               <Button variant="outline" onClick={() => setShowEditor(false)}>
                 Cancelar

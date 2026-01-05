@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Plus, Edit, CheckCircle, XCircle, Clock, Send, Package } from "lucide-react";
+import { Plus, Edit, CheckCircle, XCircle, Clock, Send, Package, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -29,7 +29,15 @@ export default function Admin() {
   });
 
   const { data: plans = [], refetch: refetchPlans } = trpc.public.getPlans.useQuery();
-  const { data: applications = [] } = trpc.admin.getAllApplications.useQuery();
+  const { data: applications = [] } = trpc.admin.getAllApplications.useQuery(undefined, {
+    enabled: user?.role === 'admin',
+  });
+  const { data: users = [] } = trpc.admin.getAllUsers.useQuery(undefined, {
+    enabled: user?.role === 'admin',
+  });
+  
+  const createPlanMutation = trpc.admin.createPlan.useMutation();
+  const updatePlanMutation = trpc.admin.updatePlan.useMutation();
 
   // Redirect if not admin
   useEffect(() => {
@@ -43,10 +51,22 @@ export default function Admin() {
     e.preventDefault();
     
     try {
-      // TODO: Implementar criação/edição real de plano
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (editingPlan) {
+        await updatePlanMutation.mutateAsync({
+          id: editingPlan.id,
+          name: planForm.name,
+          description: planForm.description,
+          price: planForm.price,
+          maxApplications: planForm.maxApplications,
+          hasAiAnalysis: planForm.hasAiAnalysis,
+          features: planForm.features,
+        });
+        toast.success('Plano atualizado com sucesso!');
+      } else {
+        await createPlanMutation.mutateAsync(planForm);
+        toast.success('Plano criado com sucesso!');
+      }
       
-      toast.success(editingPlan ? 'Plano atualizado com sucesso!' : 'Plano criado com sucesso!');
       setShowPlanDialog(false);
       setEditingPlan(null);
       setPlanForm({
@@ -58,8 +78,8 @@ export default function Admin() {
         features: ""
       });
       refetchPlans();
-    } catch (error) {
-      toast.error('Erro ao salvar plano. Tente novamente.');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar plano. Tente novamente.');
     }
   };
 
@@ -109,6 +129,8 @@ export default function Admin() {
     sent: applications.filter(a => a.status === 'sent').length,
     failed: applications.filter(a => a.status === 'failed').length,
     pending: applications.filter(a => a.status === 'pending').length,
+    totalUsers: users.length,
+    adminUsers: users.filter(u => u.role === 'admin').length,
   };
 
   if (user?.role !== 'admin') {
@@ -134,6 +156,7 @@ export default function Admin() {
           <TabsList>
             <TabsTrigger value="plans">Planos de Assinatura</TabsTrigger>
             <TabsTrigger value="history">Histórico de Entregas</TabsTrigger>
+            <TabsTrigger value="users">Usuários</TabsTrigger>
           </TabsList>
 
           {/* Plans Tab */}
@@ -316,6 +339,78 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Usuários do Sistema</h2>
+              <p className="text-muted-foreground">Visualize todos os usuários cadastrados</p>
+            </div>
+
+            {/* User Stats */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total de Usuários</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Administradores</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats.adminUsers}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Usuários Regulares</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.totalUsers - stats.adminUsers}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Users List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de Usuários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {users.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Nenhum usuário cadastrado ainda</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-medium">{user.name || 'Sem nome'}</span>
+                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                              {user.role === 'admin' ? 'Admin' : 'Usuário'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>Email: {user.email || 'Não informado'}</p>
+                            <p>ID: {user.id} | OpenID: {user.openId}</p>
+                            <p>Cadastrado em: {new Date(user.createdAt).toLocaleString('pt-BR')}</p>
+                            <p>Último login: {new Date(user.lastSignedIn).toLocaleString('pt-BR')}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -404,7 +499,11 @@ export default function Admin() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1">
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={createPlanMutation.isPending || updatePlanMutation.isPending}
+              >
                 {editingPlan ? 'Atualizar Plano' : 'Criar Plano'}
               </Button>
               <Button 

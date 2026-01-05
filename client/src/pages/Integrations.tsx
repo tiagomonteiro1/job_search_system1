@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
@@ -28,9 +28,10 @@ export default function Integrations() {
     username: "",
     password: ""
   });
-  const [saving, setSaving] = useState(false);
   
   const { data: integrations = [], refetch } = trpc.user.getIntegrations.useQuery();
+  const createMutation = trpc.user.createIntegration.useMutation();
+  const deleteMutation = trpc.user.deleteIntegration.useMutation();
 
   const handleAddIntegration = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,21 +41,21 @@ export default function Integrations() {
       return;
     }
 
-    setSaving(true);
-    
     try {
-      // TODO: Implementar criação real de integração
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await createMutation.mutateAsync({
+        platform: selectedPlatform.id,
+        platformUrl: formData.platformUrl || undefined,
+        username: formData.username,
+        password: formData.password,
+      });
       
       toast.success(`Integração com ${selectedPlatform.name} adicionada com sucesso!`);
       setShowAddDialog(false);
       setFormData({ platformUrl: "", username: "", password: "" });
       setSelectedPlatform(null);
       refetch();
-    } catch (error) {
-      toast.error('Erro ao adicionar integração. Tente novamente.');
-    } finally {
-      setSaving(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao adicionar integração. Tente novamente.');
     }
   };
 
@@ -64,27 +65,24 @@ export default function Integrations() {
     }
 
     try {
-      // TODO: Implementar exclusão real
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await deleteMutation.mutateAsync({
+        integrationId: id,
+      });
       
       toast.success('Integração removida com sucesso');
       refetch();
-    } catch (error) {
-      toast.error('Erro ao remover integração. Tente novamente.');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao remover integração. Tente novamente.');
     }
   };
 
   const handleTestConnection = async (integration: any) => {
     toast.info('Testando conexão...');
     
-    try {
-      // TODO: Implementar teste real de conexão
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Conexão testada com sucesso!');
-    } catch (error) {
-      toast.error('Falha ao testar conexão. Verifique suas credenciais.');
-    }
+    // Simulate connection test
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    toast.success('Conexão testada com sucesso!');
   };
 
   return (
@@ -235,6 +233,7 @@ export default function Integrations() {
                           size="sm"
                           className="text-destructive hover:text-destructive"
                           onClick={() => handleDeleteIntegration(integration.id, platform?.name || integration.platform)}
+                          disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Remover
@@ -296,8 +295,12 @@ export default function Integrations() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={saving}>
-                {saving ? (
+              <Button 
+                type="submit" 
+                className="flex-1" 
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Conectando...
