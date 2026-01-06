@@ -79,3 +79,12 @@
 - [x] Corrigir botão "Analisar com IA" que não está executando a análise
 - [x] Verificar integração com API de IA
 - [x] Testar fluxo completo de análise de currículo
+
+## Extração de Texto de PDF
+- [x] Instalar biblioteca pdf-parse para extração de texto
+- [x] Implementar função de extração de texto no backend
+- [x] Extrair texto durante upload do currículo
+- [x] Armazenar texto extraído no campo originalContent
+- [x] Atualizar análise de IA para usar texto real do PDF
+- [x] Testar com diferentes formatos de PDF
+- [x] Adicionar tratamento de erros para PDFs corrompidos

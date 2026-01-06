@@ -7,6 +7,7 @@ import * as db from "./db";
 import { storagePut } from "./storage";
 import { invokeLLM } from "./_core/llm";
 import { nanoid } from "nanoid";
+import { extractTextFromPDF } from "./pdfExtractor";
 
 export const appRouter = router({
   system: systemRouter,
@@ -45,23 +46,39 @@ export const appRouter = router({
         fileContent: z.string(), // Base64 encoded file
       }))
       .mutation(async ({ ctx, input }) => {
-        // Convert base64 to buffer
-        const fileBuffer = Buffer.from(input.fileContent, 'base64');
-        
-        // Upload to S3
-        const fileKey = `resumes/${ctx.user.id}/${nanoid()}-${input.fileName}`;
-        const { url } = await storagePut(fileKey, fileBuffer, 'application/pdf');
-        
-        // Save to database
-        await db.createResume({
-          userId: ctx.user.id,
-          fileName: input.fileName,
-          fileKey,
-          fileUrl: url,
-          status: 'uploaded',
-        });
-        
-        return { success: true, url };
+        try {
+          // Convert base64 to buffer
+          const fileBuffer = Buffer.from(input.fileContent, 'base64');
+          
+          // Extract text from PDF
+          let extractedText = '';
+          try {
+            extractedText = await extractTextFromPDF(fileBuffer);
+            console.log(`Texto extraído do PDF (${extractedText.length} caracteres)`);
+          } catch (extractError: any) {
+            console.warn('Não foi possível extrair texto do PDF:', extractError.message);
+            extractedText = `[Arquivo PDF: ${input.fileName}]`;
+          }
+          
+          // Upload to S3
+          const fileKey = `resumes/${ctx.user.id}/${nanoid()}-${input.fileName}`;
+          const { url } = await storagePut(fileKey, fileBuffer, 'application/pdf');
+          
+          // Save to database with extracted text
+          await db.createResume({
+            userId: ctx.user.id,
+            fileName: input.fileName,
+            fileKey,
+            fileUrl: url,
+            originalContent: extractedText,
+            status: 'uploaded',
+          });
+          
+          return { success: true, url, textExtracted: extractedText.length > 0 };
+        } catch (error: any) {
+          console.error('Erro no upload do currículo:', error);
+          throw new Error(error.message || 'Erro ao fazer upload do currículo');
+        }
       }),
     
     analyze: protectedProcedure
@@ -119,7 +136,9 @@ Como adicionar métricas e números para demonstrar impacto.
 ---
 
 **Currículo analisado:** ${resume.fileName}
-**Conteúdo:** ${resume.originalContent || 'Arquivo PDF - Analise baseada no nome e contexto do arquivo'}`
+
+**CONTEÚDO DO CURRÍCULO:**
+${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por favor, analise baseado no nome do arquivo e forneça sugestões genéricas.]'}`
               }
             ]
           });
