@@ -88,3 +88,15 @@
 - [x] Atualizar análise de IA para usar texto real do PDF
 - [x] Testar com diferentes formatos de PDF
 - [x] Adicionar tratamento de erros para PDFs corrompidos
+
+## Gerenciamento de Usuários
+- [x] Criar rota admin para listar todos os usuários com detalhes
+- [x] Criar rota admin para atualizar plano de usuário
+- [x] Criar rota admin para visualizar histórico de mudanças de plano
+- [x] Implementar interface de gerenciamento de usuários no admin
+- [x] Adicionar tabela com lista de usuários e seus planos atuais
+- [x] Implementar modal de mudança de plano com seleção de novo plano
+- [x] Adicionar confirmação antes de alterar plano
+- [x] Exibir histórico de mudanças de plano por usuário
+- [x] Adicionar filtros e busca de usuários
+- [x] Testar mudança de plano end-to-end

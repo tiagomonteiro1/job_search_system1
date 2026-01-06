@@ -412,6 +412,77 @@ ${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por fav
         return { success: true };
       }),
     
+    updateUserPlan: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .input(z.object({
+        userId: z.number(),
+        planId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        // Verify plan exists
+        const plan = await db.getSubscriptionPlanById(input.planId);
+        if (!plan) {
+          throw new Error('Plano não encontrado');
+        }
+        
+        // Update user plan
+        const dbInstance = await db.getDb();
+        if (!dbInstance) {
+          throw new Error('Database not available');
+        }
+        
+        const { users } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        
+        await dbInstance
+          .update(users)
+          .set({ subscriptionPlanId: input.planId })
+          .where(eq(users.id, input.userId));
+        
+        return { success: true, message: `Plano atualizado para ${plan.name}` };
+      }),
+    
+    getUserDetails: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .input(z.object({
+        userId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const user = await db.getUserById(input.userId);
+        if (!user) {
+          throw new Error('Usuário não encontrado');
+        }
+        
+        const resumes = await db.getResumesByUserId(input.userId);
+        const applications = await db.getApplicationsByUserId(input.userId);
+        const integrations = await db.getIntegrationsByUserId(input.userId);
+        
+        let plan = null;
+        if (user.subscriptionPlanId) {
+          plan = await db.getSubscriptionPlanById(user.subscriptionPlanId);
+        }
+        
+        return {
+          user,
+          plan,
+          stats: {
+            totalResumes: resumes.length,
+            totalApplications: applications.length,
+            totalIntegrations: integrations.length,
+          },
+        };
+      }),
+    
     updateApplicationStatus: protectedProcedure
       .use(({ ctx, next }) => {
         if (ctx.user.role !== 'admin') {
