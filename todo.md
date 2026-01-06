@@ -209,3 +209,17 @@
 - [x] Adicionar flag para evitar duplicidade de candidaturas na mesma vaga
 - [x] Corrigir erro na página de Planos
 - [x] Adicionar botão de Logout em todas as páginas
+
+## Docker Setup
+- [ ] Criar Dockerfile para aplicação Node.js
+- [ ] Criar docker-compose.yml com MySQL e aplicação
+- [ ] Criar script de instalação automatizada
+- [ ] Criar documentação de setup local
+
+## Página Minhas Candidaturas
+- [x] Exibir informações completas das vagas (título, empresa, localização, salário)
+- [x] Mostrar status de cada candidatura (pendente, enviada, confirmada, falha)
+- [x] Adicionar data e hora de envio
+- [x] Implementar filtros por status e data
+- [x] Adicionar botão para visualizar detalhes da vaga
+- [x] Mostrar payload de resposta quando disponível

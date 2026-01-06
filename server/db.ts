@@ -233,7 +233,36 @@ export async function getApplicationsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  return await db.select().from(jobApplications).where(eq(jobApplications.userId, userId)).orderBy(desc(jobApplications.createdAt));
+  // Join with jobListings to get complete job information
+  const results = await db
+    .select({
+      // Application fields
+      id: jobApplications.id,
+      userId: jobApplications.userId,
+      resumeId: jobApplications.resumeId,
+      jobListingId: jobApplications.jobListingId,
+      status: jobApplications.status,
+      sentAt: jobApplications.sentAt,
+      responsePayload: jobApplications.responsePayload,
+      errorMessage: jobApplications.errorMessage,
+      retryCount: jobApplications.retryCount,
+      createdAt: jobApplications.createdAt,
+      updatedAt: jobApplications.updatedAt,
+      // Job listing fields
+      jobTitle: jobListings.title,
+      jobCompany: jobListings.company,
+      jobDescription: jobListings.description,
+      jobLocation: jobListings.location,
+      jobSalary: jobListings.salary,
+      jobSourceUrl: jobListings.sourceUrl,
+      jobSourceSite: jobListings.sourceSite,
+    })
+    .from(jobApplications)
+    .leftJoin(jobListings, eq(jobApplications.jobListingId, jobListings.id))
+    .where(eq(jobApplications.userId, userId))
+    .orderBy(desc(jobApplications.createdAt));
+  
+  return results;
 }
 
 export async function getAllApplications() {

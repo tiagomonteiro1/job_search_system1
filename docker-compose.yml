@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Banco de dados MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: carreiraai-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: job_search_db
+      MYSQL_USER: jobsearch
+      MYSQL_PASSWORD: jobsearch123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - carreiraai-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Aplicação Node.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carreiraai-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mysql://jobsearch:jobsearch123@mysql:3306/job_search_db
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      VITE_APP_ID: dev-app-id
+      OAUTH_SERVER_URL: https://api.manus.im
+      VITE_OAUTH_PORTAL_URL: https://auth.manus.im
+      OWNER_OPEN_ID: your-owner-openid
+      OWNER_NAME: Admin
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-your-adzuna-app-id}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-your-adzuna-app-key}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_your_stripe_key}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_your_webhook_secret}
+      VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-pk_test_your_publishable_key}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_your_resend_key}
+      BUILT_IN_FORGE_API_URL: https://api.manus.im
+      BUILT_IN_FORGE_API_KEY: ${BUILT_IN_FORGE_API_KEY:-your-forge-api-key}
+      VITE_FRONTEND_FORGE_API_KEY: ${VITE_FRONTEND_FORGE_API_KEY:-your-frontend-forge-key}
+      VITE_FRONTEND_FORGE_API_URL: https://api.manus.im
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - carreiraai-network
+    command: sh -c "pnpm db:push && pnpm dev"
+
+networks:
+  carreiraai-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
