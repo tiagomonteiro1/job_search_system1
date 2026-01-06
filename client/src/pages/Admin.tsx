@@ -446,18 +446,182 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          {/* Other tabs remain the same */}
-          <TabsContent value="resumes">
+          {/* Resumes Tab */}
+          <TabsContent value="resumes" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Análise de Currículos
                 </CardTitle>
-                <CardDescription>Analise currículos enviados pelos usuários</CardDescription>
+                <CardDescription>Analise currículos enviados pelos usuários com IA</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-600">Funcionalidade em desenvolvimento...</p>
+                {(() => {
+                  const { data: allResumes = [], refetch: refetchAllResumes } = trpc.admin.getAllResumes.useQuery(undefined, {
+                    enabled: user?.role === 'admin',
+                  });
+                  const analyzeResumeMutation = trpc.admin.analyzeResumeAdmin.useMutation();
+                  const [selectedResume, setSelectedResume] = useState<any>(null);
+                  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+                  const [analysisResult, setAnalysisResult] = useState<string>("");
+                  const [resumeSearchQuery, setResumeSearchQuery] = useState("");
+
+                  const handleAnalyzeResume = async (resume: any) => {
+                    try {
+                      toast.loading('Analisando currículo com IA...', { id: 'analyze-resume' });
+                      
+                      const result = await analyzeResumeMutation.mutateAsync({
+                        resumeId: resume.id,
+                      });
+                      
+                      toast.success('Análise concluída!', { id: 'analyze-resume' });
+                      setAnalysisResult(result.analysis);
+                      setSelectedResume(resume);
+                      setShowAnalysisDialog(true);
+                      refetchAllResumes();
+                    } catch (error: any) {
+                      toast.error(error.message || 'Erro ao analisar currículo', { id: 'analyze-resume' });
+                    }
+                  };
+
+                  const filteredResumes = allResumes.filter((r: any) => 
+                    resumeSearchQuery === "" || 
+                    r.fileName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
+                    r.userName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
+                    r.userEmail?.toLowerCase().includes(resumeSearchQuery.toLowerCase())
+                  );
+
+                  const getStatusBadge = (status: string) => {
+                    const variants: Record<string, any> = {
+                      uploaded: { variant: "secondary", label: "Enviado" },
+                      analyzing: { variant: "default", label: "Analisando..." },
+                      analyzed: { variant: "default", label: "Analisado" },
+                      improved: { variant: "default", label: "Melhorado" },
+                    };
+                    const config = variants[status] || { variant: "secondary", label: status };
+                    return <Badge variant={config.variant}>{config.label}</Badge>;
+                  };
+
+                  return (
+                    <>
+                      <div className="mb-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            placeholder="Buscar por nome de arquivo, usuário ou email..."
+                            value={resumeSearchQuery}
+                            onChange={(e) => setResumeSearchQuery(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>ID</TableHead>
+                              <TableHead>Arquivo</TableHead>
+                              <TableHead>Usuário</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Data de Envio</TableHead>
+                              <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredResumes.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                                  Nenhum currículo encontrado
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              filteredResumes.map((resume: any) => (
+                                <TableRow key={resume.id}>
+                                  <TableCell className="font-medium">#{resume.id}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-blue-600" />
+                                      <span className="max-w-xs truncate">{resume.fileName}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div>
+                                      <div className="font-medium">{resume.userName || "Sem nome"}</div>
+                                      <div className="text-xs text-slate-500">{resume.userEmail || "Sem email"}</div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{getStatusBadge(resume.status)}</TableCell>
+                                  <TableCell className="text-slate-600">
+                                    {new Date(resume.createdAt).toLocaleDateString('pt-BR')}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {resume.analyzedContent && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            setSelectedResume(resume);
+                                            setAnalysisResult(resume.analyzedContent);
+                                            setShowAnalysisDialog(true);
+                                          }}
+                                          className="gap-2"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                          Ver Análise
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleAnalyzeResume(resume)}
+                                        disabled={resume.status === 'analyzing'}
+                                        className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                                      >
+                                        <Sparkles className="h-4 w-4" />
+                                        {resume.status === 'analyzing' ? 'Analisando...' : 'Analisar com IA'}
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Analysis Result Dialog */}
+                      <Dialog open={showAnalysisDialog} onOpenChange={setShowAnalysisDialog}>
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-purple-600" />
+                              Análise do Currículo
+                            </DialogTitle>
+                            <DialogDescription>
+                              {selectedResume?.fileName} - {selectedResume?.userName}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                              <div className="prose prose-sm max-w-none">
+                                <div className="whitespace-pre-wrap text-slate-700">
+                                  {analysisResult}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowAnalysisDialog(false)}>
+                              Fechar
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>

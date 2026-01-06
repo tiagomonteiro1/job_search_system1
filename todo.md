@@ -100,3 +100,13 @@
 - [x] Exibir histórico de mudanças de plano por usuário
 - [x] Adicionar filtros e busca de usuários
 - [x] Testar mudança de plano end-to-end
+
+## Análise de Currículo Admin
+- [x] Criar rota admin para listar todos os currículos
+- [x] Criar rota admin para analisar currículo específico com IA
+- [x] Implementar interface na aba Currículos do admin
+- [x] Adicionar tabela com lista de currículos de todos os usuários
+- [x] Adicionar botão de análise com IA para cada currículo
+- [x] Exibir resultado da análise em modal
+- [x] Adicionar filtro por usuário e status
+- [x] Testar análise de currículo no admin

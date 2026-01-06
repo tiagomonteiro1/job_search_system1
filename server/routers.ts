@@ -483,6 +483,153 @@ ${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por fav
         };
       }),
     
+    getAllResumes: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .query(async () => {
+        const dbInstance = await db.getDb();
+        if (!dbInstance) return [];
+        
+        const { resumes, users } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        
+        // Get all resumes with user information
+        const allResumes = await dbInstance
+          .select({
+            id: resumes.id,
+            userId: resumes.userId,
+            fileName: resumes.fileName,
+            fileUrl: resumes.fileUrl,
+            status: resumes.status,
+            originalContent: resumes.originalContent,
+            analyzedContent: resumes.analyzedContent,
+            improvedContent: resumes.improvedContent,
+            createdAt: resumes.createdAt,
+            userName: users.name,
+            userEmail: users.email,
+          })
+          .from(resumes)
+          .leftJoin(users, eq(resumes.userId, users.id))
+          .orderBy(resumes.createdAt);
+        
+        return allResumes;
+      }),
+    
+    analyzeResumeAdmin: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new Error('Unauthorized');
+        }
+        return next({ ctx });
+      })
+      .input(z.object({
+        resumeId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          // Get resume
+          const dbInstance = await db.getDb();
+          if (!dbInstance) {
+            throw new Error('Database not available');
+          }
+          
+          const { resumes } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          
+          const resumeList = await dbInstance
+            .select()
+            .from(resumes)
+            .where(eq(resumes.id, input.resumeId))
+            .limit(1);
+          
+          const resume = resumeList[0];
+          if (!resume) {
+            throw new Error('Currículo não encontrado');
+          }
+          
+          // Update status to analyzing
+          await dbInstance
+            .update(resumes)
+            .set({ status: 'analyzing' })
+            .where(eq(resumes.id, input.resumeId));
+          
+          // Call AI for analysis
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: 'system',
+                content: `Você é um especialista em análise de currículos e recrutamento com 15 anos de experiência.
+Sua tarefa é analisar currículos de forma detalhada e profissional, fornecendo feedback construtivo.
+
+Estruture sua análise em 5 seções:
+
+## 1. Pontos Fortes
+Identifique e destaque os aspectos mais positivos do currículo.
+
+## 2. Áreas de Melhoria
+Aponte o que pode ser melhorado de forma construtiva.
+
+## 3. Otimização para ATS
+Sugestões para passar por sistemas de rastreamento de candidatos.
+
+## 4. Formatação Profissional
+Recomendações sobre estrutura, design e apresentação.
+
+## 5. Quantificação de Resultados
+Como adicionar métricas e números para demonstrar impacto.
+
+---
+
+**Currículo analisado:** ${resume.fileName}
+
+**CONTEÚDO DO CURRÍCULO:**
+${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por favor, analise baseado no nome do arquivo e forneça sugestões genéricas.]'}`
+              }
+            ]
+          });
+          
+          const analysis = response.choices[0]?.message?.content;
+          
+          if (!analysis || typeof analysis !== 'string') {
+            throw new Error('A IA não retornou uma análise válida');
+          }
+          
+          // Update resume with analysis
+          await dbInstance
+            .update(resumes)
+            .set({ 
+              analyzedContent: analysis as string,
+              status: 'analyzed'
+            })
+            .where(eq(resumes.id, input.resumeId));
+          
+          return { success: true, analysis };
+        } catch (error: any) {
+          console.error('Erro na análise admin:', error);
+          
+          // Rollback status on error
+          try {
+            const dbInstance = await db.getDb();
+            if (dbInstance) {
+              const { resumes } = await import("../drizzle/schema");
+              const { eq } = await import("drizzle-orm");
+              await dbInstance
+                .update(resumes)
+                .set({ status: 'uploaded' })
+                .where(eq(resumes.id, input.resumeId));
+            }
+          } catch (rollbackError) {
+            console.error('Erro ao fazer rollback:', rollbackError);
+          }
+          
+          throw new Error(error.message || 'Erro ao analisar currículo');
+        }
+      }),
+    
     updateApplicationStatus: protectedProcedure
       .use(({ ctx, next }) => {
         if (ctx.user.role !== 'admin') {
