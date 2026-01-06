@@ -110,3 +110,8 @@
 - [x] Exibir resultado da análise em modal
 - [x] Adicionar filtro por usuário e status
 - [x] Testar análise de currículo no admin
+
+## Correção de Hooks React
+- [x] Corrigir hooks condicionais na aba Currículos do Admin
+- [x] Mover hooks para nível superior do componente
+- [x] Testar página Admin sem erros

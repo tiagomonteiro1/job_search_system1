@@ -56,6 +56,12 @@ export default function Admin() {
   const [jobSearchQuery, setJobSearchQuery] = useState("");
   const [foundJobs, setFoundJobs] = useState<any[]>([]);
 
+  // Resume analysis state
+  const [selectedResume, setSelectedResume] = useState<any>(null);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<string>("");
+  const [resumeSearchQuery, setResumeSearchQuery] = useState("");
+
   const { data: plans = [], refetch: refetchPlans } = trpc.public.getPlans.useQuery();
   const { data: applications = [] } = trpc.admin.getAllApplications.useQuery(undefined, {
     enabled: user?.role === 'admin',
@@ -68,9 +74,14 @@ export default function Admin() {
     { enabled: !!selectedUser }
   );
   
+  const { data: allResumes = [], refetch: refetchAllResumes } = trpc.admin.getAllResumes.useQuery(undefined, {
+    enabled: user?.role === 'admin',
+  });
+  
   const createPlanMutation = trpc.admin.createPlan.useMutation();
   const updatePlanMutation = trpc.admin.updatePlan.useMutation();
   const updateUserPlanMutation = trpc.admin.updateUserPlan.useMutation();
+  const analyzeResumeMutation = trpc.admin.analyzeResumeAdmin.useMutation();
 
   // Redirect if not admin
   useEffect(() => {
@@ -162,11 +173,47 @@ export default function Admin() {
     }
   };
 
+  const handleAnalyzeResume = async (resume: any) => {
+    try {
+      toast.loading('Analisando currículo com IA...', { id: 'analyze-resume' });
+      
+      const result = await analyzeResumeMutation.mutateAsync({
+        resumeId: resume.id,
+      });
+      
+      toast.success('Análise concluída!', { id: 'analyze-resume' });
+      setAnalysisResult(result.analysis);
+      setSelectedResume(resume);
+      setShowAnalysisDialog(true);
+      refetchAllResumes();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao analisar currículo', { id: 'analyze-resume' });
+    }
+  };
+
   const filteredUsers = users.filter((u: any) => 
     userSearchQuery === "" || 
     u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(userSearchQuery.toLowerCase())
   );
+
+  const filteredResumes = allResumes.filter((r: any) => 
+    resumeSearchQuery === "" || 
+    r.fileName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
+    r.userName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
+    r.userEmail?.toLowerCase().includes(resumeSearchQuery.toLowerCase())
+  );
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      uploaded: { variant: "secondary", label: "Enviado" },
+      analyzing: { variant: "default", label: "Analisando..." },
+      analyzed: { variant: "default", label: "Analisado" },
+      improved: { variant: "default", label: "Melhorado" },
+    };
+    const config = variants[status] || { variant: "secondary", label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
 
   const getUserPlanName = (user: any) => {
     if (!user.subscriptionPlanId) return "Sem plano";
@@ -457,53 +504,6 @@ export default function Admin() {
                 <CardDescription>Analise currículos enviados pelos usuários com IA</CardDescription>
               </CardHeader>
               <CardContent>
-                {(() => {
-                  const { data: allResumes = [], refetch: refetchAllResumes } = trpc.admin.getAllResumes.useQuery(undefined, {
-                    enabled: user?.role === 'admin',
-                  });
-                  const analyzeResumeMutation = trpc.admin.analyzeResumeAdmin.useMutation();
-                  const [selectedResume, setSelectedResume] = useState<any>(null);
-                  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-                  const [analysisResult, setAnalysisResult] = useState<string>("");
-                  const [resumeSearchQuery, setResumeSearchQuery] = useState("");
-
-                  const handleAnalyzeResume = async (resume: any) => {
-                    try {
-                      toast.loading('Analisando currículo com IA...', { id: 'analyze-resume' });
-                      
-                      const result = await analyzeResumeMutation.mutateAsync({
-                        resumeId: resume.id,
-                      });
-                      
-                      toast.success('Análise concluída!', { id: 'analyze-resume' });
-                      setAnalysisResult(result.analysis);
-                      setSelectedResume(resume);
-                      setShowAnalysisDialog(true);
-                      refetchAllResumes();
-                    } catch (error: any) {
-                      toast.error(error.message || 'Erro ao analisar currículo', { id: 'analyze-resume' });
-                    }
-                  };
-
-                  const filteredResumes = allResumes.filter((r: any) => 
-                    resumeSearchQuery === "" || 
-                    r.fileName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
-                    r.userName?.toLowerCase().includes(resumeSearchQuery.toLowerCase()) ||
-                    r.userEmail?.toLowerCase().includes(resumeSearchQuery.toLowerCase())
-                  );
-
-                  const getStatusBadge = (status: string) => {
-                    const variants: Record<string, any> = {
-                      uploaded: { variant: "secondary", label: "Enviado" },
-                      analyzing: { variant: "default", label: "Analisando..." },
-                      analyzed: { variant: "default", label: "Analisado" },
-                      improved: { variant: "default", label: "Melhorado" },
-                    };
-                    const config = variants[status] || { variant: "secondary", label: status };
-                    return <Badge variant={config.variant}>{config.label}</Badge>;
-                  };
-
-                  return (
                     <>
                       <div className="mb-4">
                         <div className="relative">
@@ -619,9 +619,7 @@ export default function Admin() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
-                    </>
-                  );
-                })()}
+                </>
               </CardContent>
             </Card>
           </TabsContent>
