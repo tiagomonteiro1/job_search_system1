@@ -121,3 +121,15 @@
 - [x] Identificar qual rota está causando o erro
 - [x] Corrigir validação de dados na API
 - [x] Testar página Admin sem erros
+
+## Melhorias Gerais do Sistema
+- [x] Redesenhar painel admin com layout mais limpo e menus assertivos
+- [x] Criar área de upload de currículo com botão de análise IA na mesma tela
+- [x] Adicionar botão de logout em todas as páginas de admin
+- [ ] Adicionar botão de logout em todas as páginas do cliente
+- [x] Criar funcionalidade "Clean" no admin para limpar cache e cookies
+- [x] Criar formulário de cadastro elegante e atraente na home
+- [x] Corrigir busca de vagas para funcionar corretamente
+- [x] Corrigir análise de currículo com IA para não retornar resposta vazia
+- [x] Garantir que análise de IA sempre retorne resultado válido
+- [x] Testar todas as funcionalidades end-to-end

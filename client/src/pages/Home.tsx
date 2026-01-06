@@ -251,6 +251,111 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Sign Up Form Section */}
+      <section className="py-20 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-2 shadow-2xl">
+              <CardHeader className="text-center pb-8">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <CardTitle className="text-3xl font-bold mb-2">
+                  Comece Sua Jornada Agora
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Cadastre-se gratuitamente e transforme sua busca por emprego com inteligência artificial
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  handleGetStarted();
+                }} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">Nome</Label>
+                      <Input 
+                        id="firstName" 
+                        placeholder="João" 
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Sobrenome</Label>
+                      <Input 
+                        id="lastName" 
+                        placeholder="Silva" 
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signupEmail">Email Profissional</Label>
+                    <Input 
+                      id="signupEmail" 
+                      type="email" 
+                      placeholder="joao.silva@email.com" 
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone (opcional)</Label>
+                    <Input 
+                      id="phone" 
+                      type="tel" 
+                      placeholder="(11) 99999-9999"
+                      className="h-12"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="profession">Área de Atuação</Label>
+                    <Input 
+                      id="profession" 
+                      placeholder="Ex: Desenvolvedor, Designer, Gerente..." 
+                      required
+                      className="h-12"
+                    />
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-slate-700">
+                        <p className="font-semibold mb-1">Ao se cadastrar, você recebe:</p>
+                        <ul className="space-y-1 text-xs">
+                          <li>• Análise gratuita do seu currículo</li>
+                          <li>• Acesso a vagas exclusivas</li>
+                          <li>• Sugestões personalizadas de IA</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    Criar Conta Gratuita
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  
+                  <p className="text-xs text-center text-muted-foreground">
+                    Ao se cadastrar, você concorda com nossos Termos de Uso e Política de Privacidade
+                  </p>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <section id="faq" className="py-20">
         <div className="container">

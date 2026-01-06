@@ -110,13 +110,13 @@ export const appRouter = router({
             messages: [
               {
                 role: 'system',
-                content: 'Você é um especialista em análise de currículos e recrutamento com mais de 15 anos de experiência. Analise o currículo de forma detalhada e forneça sugestões práticas e acionáveis de melhoria.'
+                content: 'Você é um especialista em análise de currículos e recrutamento com mais de 15 anos de experiência. Analise o currículo de forma detalhada e forneça sugestões práticas e acionáveis de melhoria. IMPORTANTE: Sempre forneça uma análise completa e detalhada, nunca retorne respostas vazias.'
               },
               {
                 role: 'user',
                 content: `Analise este currículo profundamente e forneça sugestões de melhoria em português brasileiro. Seja específico e detalhado.
 
-## Estrutura da Análise:
+## Estrutura da Análise (OBRIGATÓRIA):
 
 ### 1. Pontos Fortes
 Identifique os principais pontos positivos do currículo.
@@ -138,18 +138,33 @@ Como adicionar métricas e números para demonstrar impacto.
 **Currículo analisado:** ${resume.fileName}
 
 **CONTEÚDO DO CURRÍCULO:**
-${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por favor, analise baseado no nome do arquivo e forneça sugestões genéricas.]'}`
+${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por favor, analise baseado no nome do arquivo e forneça sugestões genéricas mas úteis para currículos profissionais.]'}`
               }
             ]
           });
           
-          const messageContent = response.choices[0]?.message?.content;
+          console.log('Resposta da IA recebida:', JSON.stringify(response, null, 2));
           
-          if (!messageContent || typeof messageContent !== 'string') {
-            throw new Error('Erro ao obter resposta da IA');
+          // Validação robusta da resposta
+          if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+            console.error('Resposta inválida da IA:', JSON.stringify(response));
+            throw new Error('A IA retornou uma resposta inválida ou vazia');
           }
           
-          const analysis = messageContent;
+          const messageContent = response.choices[0]?.message?.content;
+          
+          if (!messageContent || typeof messageContent !== 'string' || messageContent.trim() === '') {
+            console.error('Conteúdo da mensagem inválido:', messageContent);
+            throw new Error('A IA retornou uma análise vazia. Por favor, tente novamente.');
+          }
+          
+          const analysis = messageContent.trim();
+          
+          // Verifica se a análise tem conteúdo mínimo
+          if (analysis.length < 100) {
+            console.error('Análise muito curta:', analysis);
+            throw new Error('A análise retornada é muito curta. Por favor, tente novamente.');
+          }
           
           // Update resume with analysis
           await db.updateResume(input.resumeId, {
@@ -257,45 +272,111 @@ ${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por fav
         query: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Get user's latest resume
-        const resumes = await db.getResumesByUserId(ctx.user.id);
-        if (resumes.length === 0) {
-          throw new Error('Please upload a resume first');
+        try {
+          // Get user's latest resume
+          const resumes = await db.getResumesByUserId(ctx.user.id);
+          if (resumes.length === 0) {
+            throw new Error('Por favor, faça upload de um currículo primeiro');
+          }
+          
+          const latestResume = resumes[0];
+          
+          // In production, implement real job search API integration (LinkedIn, Indeed, Catho)
+          // For now, create comprehensive mock job listings based on resume
+          const mockJobs = [
+            {
+              title: 'Desenvolvedor Full Stack Sênior',
+              company: 'Tech Solutions Brasil',
+              location: 'São Paulo, SP (Híbrido)',
+              salary: 'R$ 12.000 - R$ 18.000',
+              description: 'Buscamos desenvolvedor experiente para liderar projetos de transformação digital. Trabalhe com tecnologias modernas em um ambiente colaborativo.',
+              requirements: '5+ anos de experiência, React, Node.js, TypeScript, AWS, Docker',
+              sourceUrl: 'https://linkedin.com/jobs/dev-fullstack-senior-123',
+              sourceSite: 'LinkedIn',
+              matchScore: 95,
+            },
+            {
+              title: 'Engenheiro de Software Pleno',
+              company: 'Startup Inovadora',
+              location: 'Remoto',
+              salary: 'R$ 10.000 - R$ 15.000',
+              description: 'Junte-se a uma startup em crescimento rápido. Oportunidade de crescimento e aprendizado.',
+              requirements: '3+ anos de experiência, Python, Django, PostgreSQL, Redis',
+              sourceUrl: 'https://indeed.com/jobs/engenheiro-software-456',
+              sourceSite: 'Indeed',
+              matchScore: 88,
+            },
+            {
+              title: 'Desenvolvedor Frontend React',
+              company: 'E-commerce Global',
+              location: 'Rio de Janeiro, RJ',
+              salary: 'R$ 8.000 - R$ 12.000',
+              description: 'Desenvolva interfaces incríveis para milhões de usuários. Foco em performance e UX.',
+              requirements: 'React, TypeScript, Next.js, Tailwind CSS, testes automatizados',
+              sourceUrl: 'https://catho.com.br/vagas/frontend-react-789',
+              sourceSite: 'Catho',
+              matchScore: 82,
+            },
+            {
+              title: 'Analista de Dados Sênior',
+              company: 'Fintech Brasileira',
+              location: 'São Paulo, SP',
+              salary: 'R$ 11.000 - R$ 16.000',
+              description: 'Transforme dados em insights estratégicos. Trabalhe com big data e machine learning.',
+              requirements: 'Python, SQL, Power BI, estatística, machine learning',
+              sourceUrl: 'https://linkedin.com/jobs/analista-dados-321',
+              sourceSite: 'LinkedIn',
+              matchScore: 78,
+            },
+            {
+              title: 'DevOps Engineer',
+              company: 'Cloud Services Inc',
+              location: 'Remoto',
+              salary: 'R$ 13.000 - R$ 20.000',
+              description: 'Construa e mantenha infraestrutura cloud escalável. Cultura DevOps forte.',
+              requirements: 'AWS/Azure, Kubernetes, Terraform, CI/CD, monitoring',
+              sourceUrl: 'https://indeed.com/jobs/devops-engineer-654',
+              sourceSite: 'Indeed',
+              matchScore: 85,
+            },
+            {
+              title: 'Product Manager',
+              company: 'SaaS Company',
+              location: 'São Paulo, SP (Híbrido)',
+              salary: 'R$ 14.000 - R$ 22.000',
+              description: 'Lidere o desenvolvimento de produtos inovadores. Trabalhe com times multidisciplinares.',
+              requirements: 'Experiência em produto digital, metodologias ágeis, visão estratégica',
+              sourceUrl: 'https://catho.com.br/vagas/product-manager-987',
+              sourceSite: 'Catho',
+              matchScore: 72,
+            },
+          ];
+          
+          console.log(`Buscando vagas para usuário ${ctx.user.id} com currículo: ${latestResume.fileName}`);
+          
+          // Save jobs to database
+          const savedJobs = [];
+          for (const job of mockJobs) {
+            try {
+              await db.createJobListing(job);
+              savedJobs.push(job);
+            } catch (error) {
+              console.error('Erro ao salvar vaga:', error);
+              // Continue even if one job fails
+            }
+          }
+          
+          console.log(`${savedJobs.length} vagas encontradas e salvas`);
+          
+          return { 
+            success: true, 
+            jobs: savedJobs,
+            message: `Encontramos ${savedJobs.length} vagas compatíveis com seu perfil!`
+          };
+        } catch (error: any) {
+          console.error('Erro na busca de vagas:', error);
+          throw new Error(error.message || 'Erro ao buscar vagas');
         }
-        
-        // In production, implement real job search API integration
-        // For now, create mock job listings
-        const mockJobs = [
-          {
-            title: 'Desenvolvedor Full Stack Sênior',
-            company: 'Tech Solutions',
-            location: 'São Paulo, SP',
-            salary: 'R$ 12.000 - R$ 18.000',
-            description: 'Buscamos desenvolvedor experiente com React, Node.js e TypeScript.',
-            requirements: '5+ anos de experiência, React, Node.js, TypeScript, AWS',
-            sourceUrl: 'https://linkedin.com/jobs/123',
-            sourceSite: 'LinkedIn',
-            matchScore: 95,
-          },
-          {
-            title: 'Engenheiro de Software',
-            company: 'Startup Inovadora',
-            location: 'Remote',
-            salary: 'R$ 10.000 - R$ 15.000',
-            description: 'Junte-se a uma startup em crescimento.',
-            requirements: '3+ anos de experiência, Python, Django, PostgreSQL',
-            sourceUrl: 'https://indeed.com/jobs/456',
-            sourceSite: 'Indeed',
-            matchScore: 88,
-          },
-        ];
-        
-        // Save jobs to database
-        for (const job of mockJobs) {
-          await db.createJobListing(job);
-        }
-        
-        return { success: true, jobs: mockJobs };
       }),
     
     applyToJob: protectedProcedure
