@@ -191,3 +191,11 @@
 - [ ] Garantir 100% de sucesso no envio de candidaturas
 - [ ] Adicionar tratamento de erros e retry automático
 - [ ] Testar integração completa end-to-end
+
+## Correção da Busca de Vagas
+- [x] Investigar por que a busca não retorna resultados relevantes
+- [x] Corrigir lógica de busca para filtrar por termo pesquisado
+- [x] Implementar busca case-insensitive
+- [x] Adicionar busca em múltiplos campos (título, descrição, empresa)
+- [x] Testar busca com diferentes termos
+- [x] Validar que resultados são relevantes ao termo pesquisado

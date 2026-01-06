@@ -535,13 +535,175 @@ Currículo melhorado:`
               sourceSite: 'Catho',
               matchScore: 72,
             },
+            {
+              title: 'Backend Developer Java',
+              company: 'Banco Digital',
+              location: 'São Paulo, SP',
+              salary: 'R$ 9.000 - R$ 14.000',
+              description: 'Desenvolva sistemas bancários robustos e escaláveis. Trabalhe com microserviços.',
+              requirements: 'Java, Spring Boot, microservices, Kafka, SQL',
+              sourceUrl: 'https://linkedin.com/jobs/backend-java-111',
+              sourceSite: 'LinkedIn',
+              matchScore: 80,
+            },
+            {
+              title: 'Designer UX/UI',
+              company: 'Agência Criativa',
+              location: 'Remoto',
+              salary: 'R$ 7.000 - R$ 11.000',
+              description: 'Crie experiências digitais incríveis. Trabalhe com clientes de diversos segmentos.',
+              requirements: 'Figma, Adobe XD, design thinking, prototipação',
+              sourceUrl: 'https://indeed.com/jobs/designer-ux-ui-222',
+              sourceSite: 'Indeed',
+              matchScore: 75,
+            },
+            {
+              title: 'Analista de Marketing Digital',
+              company: 'E-commerce Brasil',
+              location: 'Rio de Janeiro, RJ (Híbrido)',
+              salary: 'R$ 6.000 - R$ 9.000',
+              description: 'Gerencie campanhas digitais e otimize conversões. Trabalhe com Google Ads e Meta Ads.',
+              requirements: 'Google Analytics, SEO, SEM, redes sociais, análise de dados',
+              sourceUrl: 'https://catho.com.br/vagas/marketing-digital-333',
+              sourceSite: 'Catho',
+              matchScore: 70,
+            },
+            {
+              title: 'Desenvolvedor Mobile Flutter',
+              company: 'Startup de Delivery',
+              location: 'Remoto',
+              salary: 'R$ 8.000 - R$ 13.000',
+              description: 'Desenvolva apps que conectam milhões de usuários. Ambiente dinâmico e inovador.',
+              requirements: 'Flutter, Dart, Firebase, REST APIs, Git',
+              sourceUrl: 'https://linkedin.com/jobs/flutter-developer-444',
+              sourceSite: 'LinkedIn',
+              matchScore: 83,
+            },
+            {
+              title: 'Gerente de Projetos',
+              company: 'Consultoria TI',
+              location: 'São Paulo, SP',
+              salary: 'R$ 12.000 - R$ 18.000',
+              description: 'Gerencie projetos de transformação digital. Liderança de times multifuncionais.',
+              requirements: 'PMP, Scrum Master, gestão de stakeholders, metodologias ágeis',
+              sourceUrl: 'https://indeed.com/jobs/gerente-projetos-555',
+              sourceSite: 'Indeed',
+              matchScore: 77,
+            },
+            {
+              title: 'Cientista de Dados',
+              company: 'Healthtech',
+              location: 'Remoto',
+              salary: 'R$ 13.000 - R$ 19.000',
+              description: 'Aplique machine learning na saúde. Impacte vidas com tecnologia.',
+              requirements: 'Python, TensorFlow, PyTorch, estatística, SQL',
+              sourceUrl: 'https://catho.com.br/vagas/cientista-dados-666',
+              sourceSite: 'Catho',
+              matchScore: 86,
+            },
+            {
+              title: 'QA Automation Engineer',
+              company: 'Software House',
+              location: 'Belo Horizonte, MG (Híbrido)',
+              salary: 'R$ 7.000 - R$ 11.000',
+              description: 'Garanta qualidade com automação de testes. Trabalhe com CI/CD.',
+              requirements: 'Selenium, Cypress, Jest, testes automatizados, CI/CD',
+              sourceUrl: 'https://linkedin.com/jobs/qa-automation-777',
+              sourceSite: 'LinkedIn',
+              matchScore: 79,
+            },
+            {
+              title: 'Arquiteto de Soluções',
+              company: 'Multinacional Tech',
+              location: 'São Paulo, SP',
+              salary: 'R$ 18.000 - R$ 28.000',
+              description: 'Projete arquiteturas complexas e escaláveis. Liderança técnica.',
+              requirements: 'Arquitetura de software, cloud, microsserviços, liderança técnica',
+              sourceUrl: 'https://indeed.com/jobs/arquiteto-solucoes-888',
+              sourceSite: 'Indeed',
+              matchScore: 91,
+            },
+            {
+              title: 'Desenvolvedor Python',
+              company: 'IA Company',
+              location: 'Remoto',
+              salary: 'R$ 10.000 - R$ 16.000',
+              description: 'Desenvolva soluções de inteligência artificial. Trabalhe com NLP e computer vision.',
+              requirements: 'Python, Django, FastAPI, machine learning, APIs',
+              sourceUrl: 'https://catho.com.br/vagas/python-developer-999',
+              sourceSite: 'Catho',
+              matchScore: 84,
+            },
+            {
+              title: 'Analista de Segurança da Informação',
+              company: 'Empresa de Cibersegurança',
+              location: 'Brasília, DF',
+              salary: 'R$ 11.000 - R$ 17.000',
+              description: 'Proteja sistemas críticos contra ameaças. Trabalhe com pentest e análise de vulnerabilidades.',
+              requirements: 'Segurança da informação, pentest, CISSP, ethical hacking',
+              sourceUrl: 'https://linkedin.com/jobs/security-analyst-101',
+              sourceSite: 'LinkedIn',
+              matchScore: 81,
+            },
+            {
+              title: 'Desenvolvedor .NET',
+              company: 'Empresa Corporativa',
+              location: 'São Paulo, SP (Híbrido)',
+              salary: 'R$ 9.000 - R$ 14.000',
+              description: 'Desenvolva aplicações enterprise robustas. Trabalhe com tecnologias Microsoft.',
+              requirements: 'C#, .NET Core, ASP.NET, SQL Server, Azure',
+              sourceUrl: 'https://indeed.com/jobs/dotnet-developer-202',
+              sourceSite: 'Indeed',
+              matchScore: 78,
+            },
+            {
+              title: 'Scrum Master',
+              company: 'Empresa Ágil',
+              location: 'Remoto',
+              salary: 'R$ 10.000 - R$ 15.000',
+              description: 'Facilite times ágeis de alta performance. Cultura de melhoria contínua.',
+              requirements: 'Certificação Scrum, facilitação, coaching, metodologias ágeis',
+              sourceUrl: 'https://catho.com.br/vagas/scrum-master-303',
+              sourceSite: 'Catho',
+              matchScore: 74,
+            },
+            {
+              title: 'Desenvolvedor Full Stack Node.js',
+              company: 'Tech Startup',
+              location: 'Florianópolis, SC (Híbrido)',
+              salary: 'R$ 9.000 - R$ 14.000',
+              description: 'Construa produtos do zero. Ambiente de startup com muito aprendizado.',
+              requirements: 'Node.js, React, TypeScript, MongoDB, Docker',
+              sourceUrl: 'https://linkedin.com/jobs/fullstack-nodejs-404',
+              sourceSite: 'LinkedIn',
+              matchScore: 87,
+            },
           ];
           
-          console.log(`Buscando vagas para usuário ${ctx.user.id} com currículo: ${latestResume.fileName}`);
+          console.log(`Buscando vagas para usuário ${ctx.user.id} com query: "${input.query || 'todas'}"`);
+          
+          // Filter jobs based on search query
+          let filteredJobs = mockJobs;
+          if (input.query && input.query.trim().length > 0) {
+            const searchTerm = input.query.toLowerCase().trim();
+            filteredJobs = mockJobs.filter(job => {
+              const title = job.title.toLowerCase();
+              const company = job.company.toLowerCase();
+              const description = job.description.toLowerCase();
+              const requirements = job.requirements.toLowerCase();
+              const location = job.location.toLowerCase();
+              
+              return title.includes(searchTerm) ||
+                     company.includes(searchTerm) ||
+                     description.includes(searchTerm) ||
+                     requirements.includes(searchTerm) ||
+                     location.includes(searchTerm);
+            });
+          }
           
           // Save jobs to database
           const savedJobs = [];
-          for (const job of mockJobs) {
+          for (const job of filteredJobs) {
             try {
               await db.createJobListing(job);
               savedJobs.push(job);
@@ -551,12 +713,14 @@ Currículo melhorado:`
             }
           }
           
-          console.log(`${savedJobs.length} vagas encontradas e salvas`);
+          console.log(`${savedJobs.length} vagas encontradas e salvas para query: "${input.query || 'todas'}"`);
           
           return { 
             success: true, 
             jobs: savedJobs,
-            message: `Encontramos ${savedJobs.length} vagas compatíveis com seu perfil!`
+            message: savedJobs.length > 0 
+              ? `Encontramos ${savedJobs.length} vaga(s) para "${input.query || 'seu perfil'}"!`
+              : `Nenhuma vaga encontrada para "${input.query}". Tente outros termos de busca.`
           };
         } catch (error: any) {
           console.error('Erro na busca de vagas:', error);
