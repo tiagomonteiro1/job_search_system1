@@ -592,9 +592,16 @@ ${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por fav
             ]
           });
           
+          // Validate response structure
+          if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+            console.error('Resposta inválida da IA:', JSON.stringify(response));
+            throw new Error('A IA retornou uma resposta inválida ou vazia');
+          }
+          
           const analysis = response.choices[0]?.message?.content;
           
           if (!analysis || typeof analysis !== 'string') {
+            console.error('Conteúdo da análise inválido:', analysis);
             throw new Error('A IA não retornou uma análise válida');
           }
           

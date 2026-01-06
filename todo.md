@@ -115,3 +115,9 @@
 - [x] Corrigir hooks condicionais na aba Currículos do Admin
 - [x] Mover hooks para nível superior do componente
 - [x] Testar página Admin sem erros
+
+## Correção de Erro de API Admin
+- [x] Investigar erro "Cannot read properties of undefined (reading '0')"
+- [x] Identificar qual rota está causando o erro
+- [x] Corrigir validação de dados na API
+- [x] Testar página Admin sem erros
