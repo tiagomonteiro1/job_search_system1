@@ -198,7 +198,10 @@ export async function createJobListing(job: InsertJobListing) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(jobListings).values(job);
-  return result;
+  const insertId = Number(result[0].insertId);
+  
+  // Return the created job with its ID
+  return await getJobListingById(insertId);
 }
 
 export async function getAllJobListings(limit: number = 50) {

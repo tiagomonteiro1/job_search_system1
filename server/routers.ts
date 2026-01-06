@@ -764,8 +764,10 @@ Currículo melhorado:`
           const savedJobs = [];
           for (const job of jobsToSave) {
             try {
-              await db.createJobListing(job);
-              savedJobs.push(job);
+              const createdJob = await db.createJobListing(job);
+              if (createdJob) {
+                savedJobs.push(createdJob);
+              }
             } catch (error) {
               console.error('Erro ao salvar vaga:', error);
               // Continue even if one job fails

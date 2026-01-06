@@ -199,3 +199,7 @@
 - [x] Adicionar busca em múltiplos campos (título, descrição, empresa)
 - [x] Testar busca com diferentes termos
 - [x] Validar que resultados são relevantes ao termo pesquisado
+
+
+## Bugs Reportados
+- [x] Corrigir erro de envio de candidatura: jobListingId está undefined ao tentar aplicar para vaga
