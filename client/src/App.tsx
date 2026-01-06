@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Resumes from "./pages/Resumes";
 import Jobs from "./pages/Jobs";
 import Integrations from "./pages/Integrations";
+import ApplicationHistory from "./pages/ApplicationHistory";
 import Admin from "./pages/Admin";
 
 function Router() {
@@ -19,8 +20,8 @@ function Router() {
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/resumes"} component={Resumes} />
       <Route path={"/jobs"} component={Jobs} />
-      <Route path={"/applications"} component={Dashboard} />
       <Route path={"/integrations"} component={Integrations} />
+      <Route path={"/application-history"} component={ApplicationHistory} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

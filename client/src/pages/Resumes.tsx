@@ -33,6 +33,8 @@ export default function Resumes() {
   const uploadMutation = trpc.resume.upload.useMutation();
   const analyzeMutation = trpc.resume.analyze.useMutation();
   const applyImprovementsMutation = trpc.resume.applyImprovements.useMutation();
+  const deleteDuplicatesMutation = trpc.resume.deleteDuplicates.useMutation();
+  const { data: duplicatesInfo } = trpc.resume.findDuplicates.useQuery();
   
   const currentPlan = plans.find(p => p.id === profile?.subscriptionPlanId);
   const hasAiAnalysis = currentPlan?.hasAiAnalysis || false;
@@ -120,16 +122,18 @@ export default function Resumes() {
     if (!selectedResume) return;
     
     try {
-      await applyImprovementsMutation.mutateAsync({
+      const result = await applyImprovementsMutation.mutateAsync({
         resumeId: selectedResume.id,
-        improvedContent: editedContent,
       });
       
-      toast.success('Melhorias aplicadas com sucesso!');
-      setShowEditor(false);
+      if (result.improvedContent) {
+        setEditedContent(result.improvedContent);
+      }
+      
+      toast.success(result.message || 'Melhorias aplicadas com sucesso!');
       refetch();
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao salvar melhorias. Tente novamente.');
+      toast.error(error.message || 'Erro ao aplicar melhorias. Tente novamente.');
     }
   };
 
@@ -260,7 +264,36 @@ Profissional qualificado com experiência comprovada em [sua área]. Especialist
 
         {/* Resumes List */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Currículos Enviados</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Currículos Enviados</h2>
+            {duplicatesInfo && duplicatesInfo.totalDuplicates > 0 && (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const result = await deleteDuplicatesMutation.mutateAsync();
+                    toast.success(result.message || 'Duplicados excluídos com sucesso!');
+                    refetch();
+                  } catch (error: any) {
+                    toast.error(error.message || 'Erro ao excluir duplicados');
+                  }
+                }}
+                disabled={deleteDuplicatesMutation.isPending}
+              >
+                {deleteDuplicatesMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <FileCheck className="mr-2 h-4 w-4" />
+                    Excluir {duplicatesInfo.totalDuplicates} Duplicado(s)
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           
           {resumes.length === 0 ? (
             <Card>

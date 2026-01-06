@@ -189,21 +189,206 @@ ${resume.originalContent || '[Não foi possível extrair o texto do PDF. Por fav
     applyImprovements: protectedProcedure
       .input(z.object({
         resumeId: z.number(),
-        improvedContent: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const resume = await db.getResumeById(input.resumeId);
-        
-        if (!resume || resume.userId !== ctx.user.id) {
-          throw new Error('Resume not found');
+        try {
+          const resume = await db.getResumeById(input.resumeId);
+          
+          if (!resume || resume.userId !== ctx.user.id) {
+            throw new Error('Currículo não encontrado');
+          }
+          
+          if (!resume.analyzedContent) {
+            throw new Error('Por favor, analise o currículo primeiro antes de aplicar melhorias');
+          }
+          
+          // Get original content from PDF
+          const originalContent = resume.originalContent || '';
+          
+          if (!originalContent) {
+            throw new Error('Não foi possível extrair o texto do PDF original');
+          }
+          
+          // Use AI to merge original content with improvements
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: 'system',
+                content: 'Você é um especialista em otimização de currículos. Sua tarefa é pegar o conteúdo original de um currículo e as sugestões de melhoria, e criar uma versão melhorada que mantenha todas as informações originais mas incorpore as sugestões de forma natural e profissional.'
+              },
+              {
+                role: 'user',
+                content: `Por favor, crie uma versão melhorada deste currículo incorporando as sugestões de melhoria.
+
+## CONTEÚDO ORIGINAL DO CURRÍCULO:
+${originalContent}
+
+## SUGESTÕES DE MELHORIA:
+${resume.analyzedContent}
+
+## INSTRUÇÕES:
+1. Mantenha TODAS as informações do currículo original
+2. Incorpore as sugestões de melhoria de forma natural
+3. Melhore a formatação e estrutura
+4. Adicione palavras-chave relevantes para ATS
+5. Quantifique resultados quando possível
+6. Use linguagem profissional e impactante
+7. Retorne APENAS o currículo melhorado, sem comentários adicionais
+
+Currículo melhorado:`
+              }
+            ]
+          });
+          
+          console.log('Resposta da IA para melhorias:', JSON.stringify(response, null, 2));
+          
+          // Validação robusta
+          if (!response || !response.choices || !Array.isArray(response.choices) || response.choices.length === 0) {
+            console.error('Resposta inválida da IA:', JSON.stringify(response));
+            throw new Error('A IA retornou uma resposta inválida');
+          }
+          
+          const improvedContent = response.choices[0]?.message?.content;
+          
+          if (!improvedContent || typeof improvedContent !== 'string' || improvedContent.trim() === '') {
+            console.error('Conteúdo melhorado inválido:', improvedContent);
+            throw new Error('Não foi possível gerar o currículo melhorado');
+          }
+          
+          const finalImprovedContent = improvedContent.trim();
+          
+          if (finalImprovedContent.length < 100) {
+            console.error('Conteúdo melhorado muito curto:', finalImprovedContent);
+            throw new Error('O currículo melhorado gerado é muito curto');
+          }
+          
+          // Update resume with improved content
+          await db.updateResume(input.resumeId, {
+            improvedContent: finalImprovedContent,
+            status: 'improved',
+          });
+          
+          console.log('Melhorias aplicadas com sucesso ao currículo', input.resumeId);
+          
+          return { 
+            success: true, 
+            improvedContent: finalImprovedContent,
+            message: 'Melhorias aplicadas com sucesso!' 
+          };
+        } catch (error: any) {
+          console.error('Erro ao aplicar melhorias:', error);
+          throw new Error(error.message || 'Erro ao aplicar melhorias ao currículo');
         }
-        
-        await db.updateResume(input.resumeId, {
-          improvedContent: input.improvedContent,
-          status: 'improved',
-        });
-        
-        return { success: true };
+      }),
+    
+    deleteDuplicates: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        try {
+          const resumes = await db.getResumesByUserId(ctx.user.id);
+          
+          if (resumes.length === 0) {
+            return { success: true, deletedCount: 0, message: 'Nenhum currículo encontrado' };
+          }
+          
+          // Group resumes by fileName to find duplicates
+          const resumesByFileName = new Map<string, typeof resumes>();
+          
+          for (const resume of resumes) {
+            const fileName = resume.fileName.toLowerCase().trim();
+            if (!resumesByFileName.has(fileName)) {
+              resumesByFileName.set(fileName, []);
+            }
+            resumesByFileName.get(fileName)!.push(resume);
+          }
+          
+          // Find and delete duplicates (keep the most recent one)
+          let deletedCount = 0;
+          const duplicateGroups = [];
+          
+          for (const [fileName, group] of Array.from(resumesByFileName.entries())) {
+            if (group.length > 1) {
+              // Sort by createdAt descending (most recent first)
+              group.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              
+              // Keep the first one (most recent), delete the rest
+              const toKeep = group[0];
+              const toDelete = group.slice(1);
+              
+              duplicateGroups.push({
+                fileName,
+                kept: toKeep.id,
+                deleted: toDelete.map((r: any) => r.id)
+              });
+              
+              // Delete duplicates
+              for (const resume of toDelete) {
+                await db.deleteResume(resume.id);
+                deletedCount++;
+              }
+            }
+          }
+          
+          console.log(`Excluídos ${deletedCount} currículos duplicados para usuário ${ctx.user.id}`);
+          console.log('Grupos de duplicados:', JSON.stringify(duplicateGroups, null, 2));
+          
+          return { 
+            success: true, 
+            deletedCount,
+            duplicateGroups,
+            message: deletedCount > 0 
+              ? `${deletedCount} currículo(s) duplicado(s) excluído(s) com sucesso!`
+              : 'Nenhum currículo duplicado encontrado'
+          };
+        } catch (error: any) {
+          console.error('Erro ao excluir duplicados:', error);
+          throw new Error(error.message || 'Erro ao excluir currículos duplicados');
+        }
+      }),
+    
+    findDuplicates: protectedProcedure
+      .query(async ({ ctx }) => {
+        try {
+          const resumes = await db.getResumesByUserId(ctx.user.id);
+          
+          if (resumes.length === 0) {
+            return { duplicates: [], totalDuplicates: 0 };
+          }
+          
+          // Group resumes by fileName
+          const resumesByFileName = new Map<string, typeof resumes>();
+          
+          for (const resume of resumes) {
+            const fileName = resume.fileName.toLowerCase().trim();
+            if (!resumesByFileName.has(fileName)) {
+              resumesByFileName.set(fileName, []);
+            }
+            resumesByFileName.get(fileName)!.push(resume);
+          }
+          
+          // Find duplicates
+          const duplicates = [];
+          let totalDuplicates = 0;
+          
+          for (const [fileName, group] of Array.from(resumesByFileName.entries())) {
+            if (group.length > 1) {
+              duplicates.push({
+                fileName,
+                count: group.length,
+                resumes: group.map((r: any) => ({
+                  id: r.id,
+                  createdAt: r.createdAt,
+                  status: r.status
+                }))
+              });
+              totalDuplicates += group.length - 1; // -1 because we keep one
+            }
+          }
+          
+          return { duplicates, totalDuplicates };
+        } catch (error: any) {
+          console.error('Erro ao buscar duplicados:', error);
+          throw new Error(error.message || 'Erro ao buscar currículos duplicados');
+        }
       }),
   }),
 

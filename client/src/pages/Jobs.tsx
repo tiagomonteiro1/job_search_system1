@@ -15,6 +15,14 @@ export default function Jobs() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [jobs, setJobs] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 20;
+  
+  // Calculate pagination
+  const indexOfLastJob = currentPage * jobsPerPage;
+  const indexOfFirstJob = indexOfLastJob - jobsPerPage;
+  const currentJobs = jobs.slice(indexOfFirstJob, indexOfLastJob);
+  const totalPages = Math.ceil(jobs.length / jobsPerPage);
   
   const { data: profile } = trpc.user.getProfile.useQuery();
   const { data: resumes = [] } = trpc.user.getResumes.useQuery();
@@ -41,6 +49,7 @@ export default function Jobs() {
       });
       
       setJobs(result.jobs);
+      setCurrentPage(1); // Reset to first page
       toast.success(`${result.jobs.length} vagas encontradas!`);
     } catch (error: any) {
       toast.error(error.message || 'Erro ao buscar vagas. Tente novamente.');
@@ -197,8 +206,9 @@ export default function Jobs() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {jobs.map((job, index) => {
+          <div>
+            <div className="space-y-4">
+            {currentJobs.map((job, index) => {
               const applied = isJobApplied(job);
               
               return (
@@ -273,6 +283,45 @@ export default function Jobs() {
                 </Card>
               );
             })}
+          </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    onClick={() => setCurrentPage(page)}
+                    className="w-10"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
+          
+          <div className="text-center mt-4 text-sm text-muted-foreground">
+            Mostrando {indexOfFirstJob + 1}-{Math.min(indexOfLastJob, jobs.length)} de {jobs.length} vagas
+          </div>
           </div>
         )}
       </div>

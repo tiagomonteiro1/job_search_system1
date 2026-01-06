@@ -184,6 +184,13 @@ export async function updateResume(id: number, data: Partial<InsertResume>) {
   await db.update(resumes).set({ ...data, updatedAt: new Date() }).where(eq(resumes.id, id));
 }
 
+export async function deleteResume(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(resumes).where(eq(resumes.id, id));
+}
+
 // ============= JOB LISTING HELPERS =============
 
 export async function createJobListing(job: InsertJobListing) {

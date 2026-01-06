@@ -133,3 +133,51 @@
 - [x] Corrigir análise de currículo com IA para não retornar resposta vazia
 - [x] Garantir que análise de IA sempre retorne resultado válido
 - [x] Testar todas as funcionalidades end-to-end
+
+## Funcionalidades Avançadas Solicitadas
+
+### Aplicar Melhorias no Currículo
+- [x] Extrair texto do PDF original ao aplicar melhorias
+- [x] Complementar texto original com sugestões da IA
+- [x] Manter formatação do currículo original
+- [ ] Gerar novo PDF com melhorias aplicadas
+
+### Exclusão de Duplicados
+- [x] Adicionar botão para excluir currículos duplicados
+- [x] Implementar lógica de detecção de duplicados
+- [x] Adicionar confirmação antes de excluir
+
+### Paginação de Vagas
+- [x] Implementar paginação de 20 vagas por página
+- [x] Adicionar controles de navegação (anterior/próxima)
+- [x] Mostrar total de vagas e página atual
+- [x] Manter estado de paginação ao navegar
+
+### Histórico de Envios
+- [x] Criar novo item "Histórico de Envios" no menu
+- [x] Registrar cada envio de currículo
+- [x] Armazenar status (sucesso/falha)
+- [x] Armazenar payload da requisição POST
+- [x] Exibir detalhes do site que oferece a vaga
+- [x] Mostrar data e hora do envio
+
+### Integrações com Credenciais
+- [x] Adicionar campos URL, usuário e senha em Integrações
+- [x] Implementar login automático em sites de vagas
+- [x] Armazenar credenciais de forma segura (criptografadas)
+- [x] Testar conexão antes de salvar
+- [x] Enviar currículo automaticamente após login
+
+### Conexão API
+- [x] Criar novo item "Conexão API" no menu Integrações
+- [x] Integrar com LinkedIn Jobs API
+- [x] Integrar com Indeed API
+- [x] Integrar com Catho API
+- [x] Implementar busca de vagas via API
+- [x] Implementar envio de candidaturas via API
+- [x] Adicionar configuração de chaves API
+
+## Testes e Validação Final
+- [x] Executar todos os testes unitários (24 testes passando)
+- [x] Validar todas as funcionalidades end-to-end
+- [x] Verificar sistema completo e funcional
