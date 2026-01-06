@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Check, Sparkles, Target, Zap, Star, ArrowRight, Upload, Search, Send } from "lucide-react";
+import { Check, Sparkles, Target, Zap, Star, ArrowRight, Upload, Search, Send, LogOut } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -19,6 +19,7 @@ export default function Home() {
   const { data: plans = [], isLoading: plansLoading } = trpc.public.getPlans.useQuery();
   const { data: testimonials = [] } = trpc.public.getTestimonials.useQuery();
   const { data: faqs = [] } = trpc.public.getFaqs.useQuery();
+  const logoutMutation = trpc.auth.logout.useMutation();
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
@@ -40,8 +41,18 @@ export default function Home() {
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      toast.success("Obrigado por se inscrever! Em breve você receberá novidades.");
+      toast.success("Obrigado por se inscrever! Em breve voc\u00ea receber\u00e1 novidades.");
       setEmail("");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      toast.success('Logout realizado com sucesso!');
+      window.location.href = '/';
+    } catch (error) {
+      toast.error('Erro ao fazer logout');
     }
   };
 
@@ -61,9 +72,15 @@ export default function Home() {
           </nav>
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
-              <Button onClick={() => setLocation("/dashboard")}>
-                Acessar Dashboard
-              </Button>
+              <>
+                <Button variant="ghost" onClick={() => setLocation("/dashboard")}>
+                  Acessar Dashboard
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" onClick={() => window.location.href = getLoginUrl()}>

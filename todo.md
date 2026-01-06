@@ -203,3 +203,9 @@
 
 ## Bugs Reportados
 - [x] Corrigir erro de envio de candidatura: jobListingId está undefined ao tentar aplicar para vaga
+
+## Novos Bugs e Melhorias
+- [x] Corrigir página "Minhas" com erro 404
+- [x] Adicionar flag para evitar duplicidade de candidaturas na mesma vaga
+- [x] Corrigir erro na página de Planos
+- [x] Adicionar botão de Logout em todas as páginas

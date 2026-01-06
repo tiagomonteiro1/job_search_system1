@@ -324,7 +324,9 @@ export default function Jobs() {
             </div>
 
             <div className="grid gap-4">
-              {currentJobs.map((job) => (
+              {currentJobs.map((job) => {
+                const hasApplied = applications.some(app => app.jobListingId === job.id);
+                return (
                 <Card key={job.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -365,15 +367,24 @@ export default function Jobs() {
                       )}
                     </div>
                     <div className="flex gap-2">
+                      {hasApplied && (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-300">
+                          ✓ Já Candidatado
+                        </Badge>
+                      )}
                       <Button
                         onClick={() => handleApplyToJob(job.id)}
-                        disabled={!canApply || applyMutation.isPending}
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        disabled={!canApply || applyMutation.isPending || hasApplied}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
                       >
                         {applyMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Enviando...
+                          </>
+                        ) : hasApplied ? (
+                          <>
+                            ✓ Já Candidatado
                           </>
                         ) : (
                           <>
@@ -393,7 +404,8 @@ export default function Jobs() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
 
             {/* Paginação Inferior */}

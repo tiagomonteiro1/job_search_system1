@@ -795,14 +795,21 @@ Currículo melhorado:`
         resumeId: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Check if user already applied to this job
+        const applications = await db.getApplicationsByUserId(ctx.user.id);
+        const alreadyApplied = applications.some(app => app.jobListingId === input.jobListingId);
+        
+        if (alreadyApplied) {
+          throw new Error('Você já se candidatou a esta vaga');
+        }
+        
         // Check application limit
         const user = await db.getUserById(ctx.user.id);
-        const applications = await db.getApplicationsByUserId(ctx.user.id);
         
         if (user?.subscriptionPlanId) {
           const plan = await db.getSubscriptionPlanById(user.subscriptionPlanId);
           if (plan && applications.length >= plan.maxApplications) {
-            throw new Error(`You have reached your plan limit of ${plan.maxApplications} applications`);
+            throw new Error(`Você atingiu o limite de ${plan.maxApplications} candidaturas do seu plano`);
           }
         }
         

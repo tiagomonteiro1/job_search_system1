@@ -22,6 +22,7 @@ function Router() {
       <Route path={"/jobs"} component={Jobs} />
       <Route path={"/integrations"} component={Integrations} />
       <Route path={"/application-history"} component={ApplicationHistory} />
+      <Route path={"/minhas"} component={ApplicationHistory} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
