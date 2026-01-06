@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { trpc } from "@/lib/trpc";
-import { Search, MapPin, DollarSign, Building2, Send, Loader2, ExternalLink } from "lucide-react";
+import { Search, MapPin, DollarSign, Building2, Send, Loader2, ExternalLink, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -13,7 +15,16 @@ import { useLocation } from "wouter";
 export default function Jobs() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  
+  // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
+  const [location, setLocationFilter] = useState("");
+  const [contractType, setContractType] = useState<string>("all");
+  const [workMode, setWorkMode] = useState<string>("all");
+  const [seniorityLevel, setSeniorityLevel] = useState<string>("all");
+  const [minSalary, setMinSalary] = useState<number[]>([0]);
+  const [showFilters, setShowFilters] = useState(false);
+  
   const [jobs, setJobs] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 20;
@@ -48,15 +59,15 @@ export default function Jobs() {
         query: searchQuery,
       });
       
-      setJobs(result.jobs);
+      setJobs(result.jobs || []);
       setCurrentPage(1); // Reset to first page
-      toast.success(`${result.jobs.length} vagas encontradas!`);
+      toast.success(`${result.jobs?.length || 0} vagas encontradas`);
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao buscar vagas. Tente novamente.');
+      toast.error(error.message || 'Erro ao buscar vagas');
     }
   };
 
-  const handleApplyToJob = async (job: any) => {
+  const handleApplyToJob = async (jobId: number) => {
     if (!canApply) {
       toast.error(`Você atingiu o limite de ${applicationsLimit} candidaturas do seu plano`);
       return;
@@ -69,260 +80,357 @@ export default function Jobs() {
 
     try {
       await applyMutation.mutateAsync({
-        jobListingId: job.id || 1,
-        resumeId: resumes[0].id,
+        jobListingId: jobId,
+        resumeId: resumes[0]?.id,
       });
       
+      await refetchApplications();
       toast.success('Candidatura enviada com sucesso!');
-      refetchApplications();
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao enviar candidatura. Tente novamente.');
+      toast.error(error.message || 'Erro ao enviar candidatura');
     }
   };
 
-  const handleApplyToAll = async () => {
-    const remainingApplications = applicationsLimit - applicationsUsed;
-    
-    if (jobs.length === 0) {
-      toast.info('Faça uma busca primeiro para encontrar vagas');
-      return;
-    }
-
-    if (remainingApplications === 0) {
-      toast.error(`Você atingiu o limite de ${applicationsLimit} candidaturas do seu plano`);
-      return;
-    }
-
-    const jobsToApply = jobs.slice(0, remainingApplications);
-    
-    toast.info(`Enviando candidatura para ${jobsToApply.length} vagas...`);
-    
-    try {
-      for (const job of jobsToApply) {
-        await applyMutation.mutateAsync({
-          jobListingId: job.id || 1,
-          resumeId: resumes[0]?.id,
-        });
-      }
-      
-      toast.success(`${jobsToApply.length} candidaturas enviadas com sucesso!`);
-      refetchApplications();
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao enviar candidaturas. Tente novamente.');
-    }
+  const resetFilters = () => {
+    setSearchQuery("");
+    setLocationFilter("");
+    setContractType("all");
+    setWorkMode("all");
+    setSeniorityLevel("all");
+    setMinSalary([0]);
   };
 
-  const isJobApplied = (job: any) => {
-    return applications.some(app => app.jobListingId === job.id);
-  };
-
-  return (
-    <div className="min-h-screen bg-background">
-      <PageHeader title="Procurar Vagas" showBackButton={true} backTo="/dashboard" />
-
-      <div className="container py-8">
-        {/* Search Section */}
-        <Card className="mb-8">
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Buscar Vagas Compatíveis</CardTitle>
-            <CardDescription>
-              Nossa IA encontra vagas que combinam com seu perfil profissional
-            </CardDescription>
+            <CardTitle>Acesso Restrito</CardTitle>
+            <CardDescription>Faça login para buscar vagas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-3">
+            <Button onClick={() => setLocation('/')} className="w-full">
+              Ir para Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <PageHeader title="Buscar Vagas" />
+
+      <div className="container mx-auto py-8 px-4">
+        {/* Status do Plano */}
+        <Card className="mb-6 border-l-4 border-l-blue-500">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Plano {currentPlan?.name || 'Não definido'}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {applicationsUsed} de {applicationsLimit} candidaturas utilizadas
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">
+                  {applicationsLimit - applicationsUsed}
+                </div>
+                <p className="text-sm text-muted-foreground">restantes</p>
+              </div>
+            </div>
+            <div className="mt-4 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
+                style={{ width: `${(applicationsUsed / applicationsLimit) * 100}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Busca e Filtros */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Buscar Vagas</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                {showFilters ? 'Ocultar' : 'Mostrar'} Filtros
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Busca Principal */}
+            <div className="flex gap-2">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Cargo, empresa ou palavra-chave..."
-                  className="pl-10"
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Cargo, palavra-chave ou empresa..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchJobs()}
+                  className="pl-10"
+                />
+              </div>
+              <div className="w-64 relative">
+                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Localização"
+                  value={location}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchJobs()}
+                  className="pl-10"
                 />
               </div>
               <Button 
-                onClick={handleSearchJobs} 
-                disabled={searchMutation.isPending || resumes.length === 0}
+                onClick={handleSearchJobs}
+                disabled={searchMutation.isPending}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 {searchMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Buscando...
                   </>
                 ) : (
                   <>
-                    <Search className="mr-2 h-4 w-4" />
-                    Buscar Vagas
+                    <Search className="w-4 h-4 mr-2" />
+                    Buscar
                   </>
                 )}
               </Button>
             </div>
-            {resumes.length === 0 && (
-              <p className="text-sm text-muted-foreground mt-3">
-                ⚠️ Envie um currículo antes de buscar vagas
-              </p>
+
+            {/* Filtros Avançados */}
+            {showFilters && (
+              <div className="pt-4 border-t space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Tipo de Contrato */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tipo de Contrato</label>
+                    <Select value={contractType} onValueChange={setContractType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="CLT">CLT</SelectItem>
+                        <SelectItem value="PJ">PJ</SelectItem>
+                        <SelectItem value="Freelance">Freelance</SelectItem>
+                        <SelectItem value="Estágio">Estágio</SelectItem>
+                        <SelectItem value="Temporário">Temporário</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Modalidade de Trabalho */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Modalidade</label>
+                    <Select value={workMode} onValueChange={setWorkMode}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="Remoto">Remoto</SelectItem>
+                        <SelectItem value="Híbrido">Híbrido</SelectItem>
+                        <SelectItem value="Presencial">Presencial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Nível de Senioridade */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nível</label>
+                    <Select value={seniorityLevel} onValueChange={setSeniorityLevel}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="Estágio">Estágio</SelectItem>
+                        <SelectItem value="Júnior">Júnior</SelectItem>
+                        <SelectItem value="Pleno">Pleno</SelectItem>
+                        <SelectItem value="Sênior">Sênior</SelectItem>
+                        <SelectItem value="Especialista">Especialista</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Salário Mínimo */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Salário Mínimo: R$ {minSalary[0].toLocaleString('pt-BR')}
+                  </label>
+                  <Slider
+                    value={minSalary}
+                    onValueChange={setMinSalary}
+                    min={0}
+                    max={30000}
+                    step={1000}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>R$ 0</span>
+                    <span>R$ 30.000+</span>
+                  </div>
+                </div>
+
+                {/* Botão Limpar Filtros */}
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={resetFilters}>
+                    Limpar Filtros
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Stats and Actions */}
-        {jobs.length > 0 && (
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold">Vagas Encontradas</h2>
+        {/* Lista de Vagas */}
+        {jobs.length > 0 ? (
+          <>
+            <div className="mb-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {jobs.length} vagas compatíveis com seu perfil
+                Mostrando {indexOfFirstJob + 1}-{Math.min(indexOfLastJob, jobs.length)} de {jobs.length} vagas
               </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-            <Button 
-              onClick={handleApplyToAll}
-              disabled={!canApply || applyMutation.isPending}
-            >
-              {applyMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Enviar para Todas
-                </>
-              )}
-            </Button>
-          </div>
-        )}
 
-        {/* Jobs List */}
-        {jobs.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Search className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">Nenhuma vaga encontrada</p>
-              <p className="text-sm text-muted-foreground">
-                Faça uma busca para encontrar vagas compatíveis
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div>
-            <div className="space-y-4">
-            {currentJobs.map((job, index) => {
-              const applied = isJobApplied(job);
-              
-              return (
-                <Card key={index} className="hover:border-primary/50 transition-colors">
+            <div className="grid gap-4">
+              {currentJobs.map((job) => (
+                <Card key={job.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle className="text-xl">{job.title}</CardTitle>
-                          <Badge variant="secondary" className="bg-primary/10 text-primary">
-                            {job.matchScore}% compatível
+                        <CardTitle className="text-xl mb-2">{job.title}</CardTitle>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {job.company}
                           </Badge>
-                          {applied && (
-                            <Badge className="bg-green-100 text-green-700">
-                              Candidatura Enviada
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {job.location}
+                          </Badge>
+                          {job.salary && (
+                            <Badge variant="outline" className="flex items-center gap-1 text-green-600">
+                              <DollarSign className="w-3 h-3" />
+                              {job.salary}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4" />
-                            {job.company}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {job.location}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4" />
-                            {job.salary}
-                          </div>
-                        </div>
+                        <CardDescription className="line-clamp-2">
+                          {job.description}
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold mb-2">Descrição</h4>
-                        <p className="text-sm text-muted-foreground">{job.description}</p>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold mb-2">Requisitos</h4>
-                        <p className="text-sm text-muted-foreground">{job.requirements}</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-4 border-t">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>Fonte:</span>
-                          <Badge variant="outline">{job.sourceSite}</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(job.sourceUrl, '_blank')}
-                          >
-                            <ExternalLink className="mr-2 h-4 w-4" />
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {job.contractType && (
+                        <Badge variant="outline">{job.contractType}</Badge>
+                      )}
+                      {job.workMode && (
+                        <Badge variant="outline">{job.workMode}</Badge>
+                      )}
+                      {job.seniorityLevel && (
+                        <Badge variant="outline">{job.seniorityLevel}</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleApplyToJob(job.id)}
+                        disabled={!canApply || applyMutation.isPending}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                      >
+                        {applyMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Candidatar-se
+                          </>
+                        )}
+                      </Button>
+                      {job.url && (
+                        <Button variant="outline" asChild>
+                          <a href={job.url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4 mr-2" />
                             Ver Vaga
-                          </Button>
-                          <Button 
-                            size="sm"
-                            onClick={() => handleApplyToJob(job)}
-                            disabled={applied || !canApply || applyMutation.isPending}
-                          >
-                            <Send className="mr-2 h-4 w-4" />
-                            {applied ? 'Candidatura Enviada' : 'Candidatar-se'}
-                          </Button>
-                        </div>
-                      </div>
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-          
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Anterior
-              </Button>
-              
-              <div className="flex items-center gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    onClick={() => setCurrentPage(page)}
-                    className="w-10"
-                  >
-                    {page}
-                  </Button>
-                ))}
-              </div>
-              
-              <Button
-                variant="outline"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Próxima
-              </Button>
+              ))}
             </div>
-          )}
-          
-          <div className="text-center mt-4 text-sm text-muted-foreground">
-            Mostrando {indexOfFirstJob + 1}-{Math.min(indexOfLastJob, jobs.length)} de {jobs.length} vagas
-          </div>
-          </div>
+
+            {/* Paginação Inferior */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Anterior
+                </Button>
+                <span className="text-sm px-4">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Nenhuma vaga encontrada</h3>
+              <p className="text-muted-foreground mb-4">
+                Use a busca acima para encontrar oportunidades compatíveis com seu perfil
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

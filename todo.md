@@ -181,3 +181,13 @@
 - [x] Executar todos os testes unitários (24 testes passando)
 - [x] Validar todas as funcionalidades end-to-end
 - [x] Verificar sistema completo e funcional
+
+## Integração Real com Indeed
+- [x] Pesquisar documentação oficial do Indeed API
+- [x] Analisar métodos de autenticação e endpoints disponíveis
+- [x] Implementar filtros de pesquisa avançada (localização, salário, tipo de contrato, senioridade)
+- [ ] Integrar Indeed API para busca de vagas reais (requer parceria)
+- [ ] Implementar sistema de envio de currículo via Indeed
+- [ ] Garantir 100% de sucesso no envio de candidaturas
+- [ ] Adicionar tratamento de erros e retry automático
+- [ ] Testar integração completa end-to-end
