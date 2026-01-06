@@ -211,10 +211,12 @@
 - [x] Adicionar botão de Logout em todas as páginas
 
 ## Docker Setup
-- [ ] Criar Dockerfile para aplicação Node.js
-- [ ] Criar docker-compose.yml com MySQL e aplicação
-- [ ] Criar script de instalação automatizada
-- [ ] Criar documentação de setup local
+- [x] Criar Dockerfile para aplicação Node.js
+- [x] Criar docker-compose.yml com MySQL e aplicação
+- [x] Criar script SQL de inicialização do banco
+- [x] Criar scripts de setup automatizado (install.sh, start.sh, stop.sh, clean.sh)
+- [x] Criar documentação completa de setup local (DOCKER_SETUP.md)
+- [x] Criar .dockerignore para otimizar build
 
 ## Página Minhas Candidaturas
 - [x] Exibir informações completas das vagas (título, empresa, localização, salário)
