@@ -69,56 +69,88 @@ export const appRouter = router({
         resumeId: z.number(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const resume = await db.getResumeById(input.resumeId);
-        
-        if (!resume || resume.userId !== ctx.user.id) {
-          throw new Error('Resume not found');
-        }
-        
-        // Check if user has AI analysis in their plan
-        const user = await db.getUserById(ctx.user.id);
-        if (user?.subscriptionPlanId) {
-          const plan = await db.getSubscriptionPlanById(user.subscriptionPlanId);
-          if (!plan?.hasAiAnalysis) {
-            throw new Error('AI analysis not available in your plan');
+        try {
+          const resume = await db.getResumeById(input.resumeId);
+          
+          if (!resume || resume.userId !== ctx.user.id) {
+            throw new Error('Currículo não encontrado');
           }
-        }
-        
-        // Update status to analyzing
-        await db.updateResume(input.resumeId, { status: 'analyzing' });
-        
-        // Analyze with AI
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: 'system',
-              content: 'Você é um especialista em análise de currículos e recrutamento. Analise o currículo e forneça sugestões detalhadas de melhoria.'
-            },
-            {
-              role: 'user',
-              content: `Analise este currículo e forneça sugestões de melhoria em português brasileiro. Inclua:
-1. Pontos fortes do currículo
-2. Sugestões específicas de melhoria
-3. Otimização de palavras-chave para ATS
-4. Dicas de formatação profissional
-5. Como quantificar resultados
-
-Currículo: ${resume.originalContent || 'Arquivo PDF enviado - ' + resume.fileName}`
+          
+          // Check if user has AI analysis in their plan
+          const user = await db.getUserById(ctx.user.id);
+          if (user?.subscriptionPlanId) {
+            const plan = await db.getSubscriptionPlanById(user.subscriptionPlanId);
+            if (!plan?.hasAiAnalysis) {
+              throw new Error('Análise com IA não disponível no seu plano');
             }
-          ]
-        });
-        
-        const messageContent = response.choices[0]?.message?.content;
-        const analysis = typeof messageContent === 'string' ? messageContent : 'Análise não disponível';
-        
-        // Update resume with analysis
-        await db.updateResume(input.resumeId, {
-          analyzedContent: analysis,
-          status: 'analyzed',
-        });
-        
-        return { success: true, analysis };
+          }
+          
+          // Update status to analyzing
+          await db.updateResume(input.resumeId, { status: 'analyzing' });
+          
+          // Analyze with AI
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: 'system',
+                content: 'Você é um especialista em análise de currículos e recrutamento com mais de 15 anos de experiência. Analise o currículo de forma detalhada e forneça sugestões práticas e acionáveis de melhoria.'
+              },
+              {
+                role: 'user',
+                content: `Analise este currículo profundamente e forneça sugestões de melhoria em português brasileiro. Seja específico e detalhado.
+
+## Estrutura da Análise:
+
+### 1. Pontos Fortes
+Identifique os principais pontos positivos do currículo.
+
+### 2. Áreas de Melhoria
+Liste sugestões específicas e acionáveis para melhorar o currículo.
+
+### 3. Otimização para ATS (Applicant Tracking System)
+Sugira palavras-chave e formatações que ajudem o currículo a passar por sistemas automatizados.
+
+### 4. Formatação Profissional
+Dicas de como melhorar a apresentação visual e estrutura do documento.
+
+### 5. Quantificação de Resultados
+Como adicionar métricas e números para demonstrar impacto.
+
+---
+
+**Currículo analisado:** ${resume.fileName}
+**Conteúdo:** ${resume.originalContent || 'Arquivo PDF - Analise baseada no nome e contexto do arquivo'}`
+              }
+            ]
+          });
+          
+          const messageContent = response.choices[0]?.message?.content;
+          
+          if (!messageContent || typeof messageContent !== 'string') {
+            throw new Error('Erro ao obter resposta da IA');
+          }
+          
+          const analysis = messageContent;
+          
+          // Update resume with analysis
+          await db.updateResume(input.resumeId, {
+            analyzedContent: analysis,
+            status: 'analyzed',
+          });
+          
+          return { success: true, analysis };
+        } catch (error: any) {
+          // Rollback status on error
+          try {
+            await db.updateResume(input.resumeId, { status: 'uploaded' });
+          } catch (rollbackError) {
+            console.error('Failed to rollback resume status:', rollbackError);
+          }
+          
+          throw new Error(error.message || 'Erro ao analisar currículo');
+        }
       }),
+    
     
     applyImprovements: protectedProcedure
       .input(z.object({

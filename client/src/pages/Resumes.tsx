@@ -86,15 +86,23 @@ export default function Resumes() {
     }
 
     setSelectedResume(resume);
+    setImprovements('');
     setShowAnalysis(true);
 
     try {
+      toast.info('Iniciando análise com IA...');
+      
       const result = await analyzeMutation.mutateAsync({
         resumeId: resume.id,
       });
       
-      setImprovements(result.analysis);
-      toast.success('Análise concluída!');
+      if (result.analysis) {
+        setImprovements(result.analysis);
+        toast.success('Análise concluída com sucesso!');
+      } else {
+        toast.error('Erro: Análise não retornou resultados');
+      }
+      
       refetch();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao analisar currículo. Tente novamente.');

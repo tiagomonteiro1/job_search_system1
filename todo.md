@@ -74,3 +74,8 @@
 - [x] Adicionar análise de currículo com IA no admin
 - [x] Adicionar cadastro de promoções no admin
 - [x] Adicionar localizador de vagas nos principais sites
+
+## Correções
+- [x] Corrigir botão "Analisar com IA" que não está executando a análise
+- [x] Verificar integração com API de IA
+- [x] Testar fluxo completo de análise de currículo
